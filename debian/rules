@@ -12,3 +12,5 @@ override_dh_auto_configure:
 override_dh_auto_build:
 	./makeall
 
+override_dh_auto_clean:
+	./clean
