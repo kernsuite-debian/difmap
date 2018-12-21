@@ -25,6 +25,6 @@ typedef struct {
 int maplot(Observation *ob, MapBeam *mb, Mapwin *mw, MaplotBeam *mpb,
 	   MaplotVect *vect, int domap, Ctable *ctab, int docont, int dovect,
 	   int domod, float *levs, int nlev,
-	   float cmul, float *box, MarkerList *markers);
+	   float cmul, float *box, MarkerList *markers, int docur);
 
 #endif

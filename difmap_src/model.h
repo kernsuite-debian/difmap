@@ -19,17 +19,26 @@ typedef enum {
  */
 typedef enum {M_DELT, M_GAUS, M_DISK, M_ELLI, M_RING, M_RECT, M_SZ} Modtyp;
 
+const char *modtyp_name(Modtyp type);
+
 typedef struct mod_type {
-  Modtyp type;    /* Model component type */
-  int freepar;    /* Bitmap of Modpar values used to mark free parameters */
-  float flux;     /* Flux of component */
-  float x;        /* RA relative coordinate of component centroid (radians) */
-  float y;        /* Dec relative coordinate of component centroid (radians) */
-  float major;    /* Major axis of component (radians) */
-  float ratio;    /* Axial ratio (minor/major), < 1.0 */
-  float phi;      /* Position angle of major axis (radians N->E) */
-  float freq0;    /* The reference frequency to use with spectral indeces */
-  float spcind;   /* The spectral index of the component flux */
+  Modtyp type;      /* Model component type */
+  int freepar;      /* Bitmap of Modpar values used to mark free parameters */
+  float flux;       /* Flux of component */
+  float flux_err;   /* Standard deviation of flux (zero if fixed) */
+  float x;          /* RA relative coordinate of component centroid (radians) */
+  float x_err;      /* Standard deviation of x (zero if fixed) */
+  float y;          /* Dec relative coordinate of component centroid (radians) */
+  float y_err;      /* Standard deviation of y (zero if fixed) */
+  float major;      /* Major axis of component (radians) */
+  float major_err;  /* Standard deviation of major (zero if fixed) */
+  float ratio;      /* Axial ratio (minor/major), < 1.0 */
+  float ratio_err;  /* Standard deviation of ratio (zero if fixed) */
+  float phi;        /* Position angle of major axis (radians N->E) */
+  float phi_err;    /* Standard deviation of phi (zero if fixed) */
+  float freq0;      /* The reference frequency to use with spectral indeces */
+  float spcind;     /* The spectral index of the component flux */
+  float spcind_err; /* Standard deviation of fitted phi (zero if fixed) */
   struct mod_type *next;
 } Modcmp;
 

@@ -1190,7 +1190,7 @@ static int c_plaxes(Clspar *cp, Clssub *cs, int dotop, int dobot, int erase)
  * inside the top right hand corner.
  */
   cpgsvp(cp->vxa, cp->vxb, cs->vya, cs->vyb);
-  sprintf(label, "%.10s-%.10s-%.10s", sub->tel[cs->ts.ta].name,
+  snprintf(label, sizeof(label), "%.10s-%.10s-%.10s", sub->tel[cs->ts.ta].name,
 	  sub->tel[cs->ts.tb].name, sub->tel[cs->ts.tc].name);
   cpgsch(0.5f);
   cpgmtxt("T", -1.5f, 0.99f, 1.0f, label);
@@ -1584,14 +1584,12 @@ static int c_cursor(Clspar *cp, int noout, Bandmode mode,
 static int c_label(Clspar *cp)
 {
   Observation *ob;      /* The descriptor of the observation being plotted */
-  Subarray *sub;        /* The descriptor of the sub-array being plotted */
   char awrk[81];        /* Work string for labelling */
   char bwrk[81];        /* Work string for labelling */
 /*
  * Get the descriptors of the observation and sub-array being plotted.
  */
   ob = cp->ob;
-  sub = cp->sub;
 /*
  * Set the viewport around the plot grid.
  */
@@ -1604,10 +1602,11 @@ static int c_label(Clspar *cp)
 /*
  * Start the title with the source name and date.
  */
-  sprintf(awrk, "%s  %s", ob->source.name,
+  snprintf(awrk, sizeof(awrk), "%s  %s", ob->source.name,
 	  sutdate(ob->date.year, ob->date.ut, bwrk));
   cpgmtxt("T", 1.7f, 0.0f, 0.0f, awrk);
-  sprintf(awrk, "%s triangles of ", cp->doall ? "Closure":"Upper closure");
+  snprintf(awrk, sizeof(awrk), "%s triangles of ",
+           cp->doall ? "Closure":"Upper closure");
 /*
  * Describe the fixed telescopes of the triangles.
  */
@@ -1622,7 +1621,7 @@ static int c_label(Clspar *cp)
  * Write the IF index part of the title and append it to the title
  * if there is room.
  */
-  sprintf(bwrk, " in IF %d", ob->stream.cif+1);
+  snprintf(bwrk, sizeof(bwrk), " in IF %d", ob->stream.cif+1);
   if(strlen(awrk) + strlen(bwrk) < sizeof(awrk)-1)
     strcat(awrk, bwrk);
   cpgmtxt("T", 0.5f, 0.0f, 0.0f, awrk);
@@ -2085,13 +2084,8 @@ static int c_find(Clspar *cp, Clscurs *cc)
  */
 static int c_mlab(Clspar *cp, int erase)
 {
-  Observation *ob;  /* The descriptor of the observation being plotted */
   int oldcol;       /* Temporary storage for entry color index */
   char label[81];   /* Temporary work string to compose mode label in */
-/*
- * Get the descriptor of the observation.
- */
-  ob = cp->ob;
 /*
  * Store the existing plot color.
  */
@@ -2110,7 +2104,7 @@ static int c_mlab(Clspar *cp, int erase)
 /*
  * Compose the mode label.
  */
-  sprintf(label, "%s editing of %s channels of %s.",
+  snprintf(label, sizeof(label), "%s editing of %s channels of %s.",
 	  (cp->tri_ed || cp->nref==REF_TRI) ? "Triangle" :
 	     (cp->nref==REF_BAS ? "Baseline" : "Station"),
 	  cp->ch_ed ? "selected" : "all",

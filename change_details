@@ -3,11 +3,110 @@ This file contains the details of recent difmap changes.
 Changes are listed from the most recent to the oldest. Dates are
 formatted as mm/dd/yy.
 
+25/11/2018 version.h
+
+           The version number of difmap has been incremented to 2.5b.
+
+25/11/2018 difmap.c help/model_flux.hlp
+
+           Added a new function to difmap that can be used in scripts
+           that wish to query the total flux in either the normal
+           model or the continuum model.
+
+25/11/2018 obs.c
+
+           While cleaning up the output of gcc -Wall, I noticed a bug
+           in new_Stokes(). In practice this won't ever have been
+           triggered because it only occurred if an existing array of
+           polarizations was increased, which difmap never does.
+
+13/11/2018 uvplot.c vplot.c uvradplt.c timplt.c specplot.c maplot.c
+           corplot.c clplot.c
+
+           Switched from using sprintf() to snprintf() after hearing
+           about a crash in maplot on a Mac. The symptoms of the crash
+           suggested that a plot label might be overflowing its
+           buffer, but this turned out not to be the case, so using
+           snprintf() didn't help. Note that when difmap was
+           developed, snprintf() was not part of the C standard, and
+           there were several incompatible versions of snprintf(), so
+           it wasn't sufficiently portable to be used. However
+           snprintf() has now been in the C standard since C99, so it
+           should be safe to use by now.
+
+04/17/2018 version.h
+
+           The version number of difmap has been incremented to 2.5a.
+
+04/17/2018 uvaver.c difmap.c help/check_uvaver.hlp help/uvaver.hlp
+
+           There is now a new command called check_uvaver. Given a
+           specified averaging time, this checks whether the uvaver
+           command will cause significant time-smearing at a given
+           position or radius within the map.
+
+04/12/2018 difmap.c maplot.c
+
+           The mapplot command now has a new optional argument called
+           usecursor. By setting this to false, you can force mapplot
+           to be non-interactive.
+
+04/10/2018 modfit.c difmap.c help/{showmodel.hlp, rmodel.hlp, wmodel.hlp,
+           models.hlp, modelfit.hlp}
+
+           There is a new command called showmodel, which displays the
+           current model in a more user-friendly way than the wmodel
+           command. It also shows error estimates for each of the
+           fitted parameters, along with the Right Ascension and
+           Declination of each component.
+
+04/10/2018 obpol.c
+
+           The select command now knows how to form I,Q,U and V from
+           combinations of the linear polarizations, XX,YY, XY,
+           YX. This is particularly useful for ALMA
+           observations. Previously the select command only knew how
+           to form these stokes parameters when the FITS file
+           contained circular polarizations, LL, RR, LR and RL.
+           Beware that it is assumed that any leakage between the
+           linear polarizations was removed during calibration.
+
+04/10/2018 difmap.c
+
+           The setcont command now has an optional 'doset'
+           argument. Specifying this as false moves the continuum
+           model back to the normal model.
+
+04/10/2018 slalib_src/dat.c
+
+           The table of leap seconds has been updated to include the
+           leap second of 1-Jan-2017.
+
+04/10/2018 help/pointing_center.hlp help/antenna_beam.hlp
+
+           Help files have been added for commands that were written
+           long ago, but probably never used.
+
+04/10/2018 doc/model.tex wmodel.c
+
+           The a and b parameters were incorrectly documented to be
+           the major and minor axis "half-extents". The document has
+           now been corrected to refer to them as major and minor axis
+           FWHMs (ie. Full Width at Half Maximum). The wmodel command
+           also now documents this by labelling the column heading for
+           the major axis extent as "Major FWHM (mas)", instead of just
+           "Major (mas)".
+
+01/06/2015 slalib_src/dat.c
+
+           The table of leap seconds has been updated to include the
+           leap second of 1-Jul-2015.
+
 03/17/2010 version.h
 
            Changed the version to 2.4l.
 
-03/17/2010 configure
+03/21/2010 configure
 
            Changed the default fortran compiler of the linux-i486-gcc
            configuration option, to gfortran.
@@ -27,7 +126,7 @@ formatted as mm/dd/yy.
 
            I have thus turned off stdio buffering of files that are
            managed by the record-I/O facility.  This facility is
-           usually used to either read large blocks of data per read,
+           usually used to either read large records of data per read,
            or to read small sections of widely separated large
            records. Neither of these use cases generally benefits from
            stdio buffering. So this patch should not have any adverse

@@ -464,7 +464,6 @@ Observation *del_Observation(Observation *ob)
  */
 static Stokes *new_Stokes(Observation *ob, int npol)
 {
-  Stokes *pol;   /* Pointer into ob->pols[] */
 /*
  * Allocate a new array?
  */
@@ -479,11 +478,12 @@ static Stokes *new_Stokes(Observation *ob, int npol)
  * Re-size an existing array?
  */
   else if(ob->npol != npol) {
-    pol = realloc(ob->pols, sizeof(Stokes) * npol);
-    if(ob->pols == NULL) {
+    Stokes *pols = realloc(ob->pols, sizeof(Stokes) * npol);
+    if(pols == NULL) {
       lprintf(stderr, "new_Stokes: Insufficient memory.\n");
       return NULL;
-    };    
+    };
+    ob->pols = pols;
   };
 /*
  * Return the revised array.

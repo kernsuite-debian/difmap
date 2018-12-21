@@ -26,7 +26,6 @@ void imran(float *map, int xdim, int ydim, int xa, int xb, int ya, int yb,
   float vmin,vmax;/* Internal versions of mapmin,mapmax */
   int xskip;      /* Offset from end of one row to start of next */
   int xwid;       /* Number of elements across patch */
-  int ywid;       /* Number of elements down patch */
   int itmp;       /* Used as intermediary to swap patch bounds if wrong */
   int ix,iy;      /* Pixel coordinates in 'map' */
 /*
@@ -57,7 +56,6 @@ void imran(float *map, int xdim, int ydim, int xa, int xb, int ya, int yb,
  * Determine the width and height of the patch in pixels.
  */
   xwid = xb - xa + 1;
-  ywid = yb - ya + 1;
 /*
  * Find the pointer to the start of the patch (at X=xa,Y=ya).
  */

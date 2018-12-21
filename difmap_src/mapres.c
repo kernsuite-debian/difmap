@@ -317,7 +317,6 @@ static void gauconv(float min_a, float maj_a, float ang_a,
 static void res_smooth(float *map, int nx, int ny)
 {
   float *mapptr;  /* Points to start of map area in 'map' */
-  float *endptr;  /* Points to last pixel of map in 'map' */
   float *dest_ptr;/* Points to the destination element in the 'map' array */
   float *tmp_ptr; /* Temporary pointer into 'map' array */
   size_t yinc;    /* No. elements between end of one row and start of next */
@@ -347,10 +346,9 @@ static void res_smooth(float *map, int nx, int ny)
   xb = 3*xa - 1;
   yb = 3*ya - 1;
 /*
- * Work out pointers to the start and end pixels of the central map.
+ * Get a pointer to the start of the central map.
  */
   mapptr = map + xa + ya * nx;
-  endptr = map + xb + yb * nx;
 /*
  * Work out the increment in elements to get from the end of a row
  * to the start of the next row.

@@ -170,9 +170,10 @@ There are three ways to specify model components to modelfit.
 
 RELATED COMMANDS
 ----------------
-edmodel - Edit the current models with an external editor.
-rmodel  - Read a new model for modelfit.
-mapplot - Maplot allows interactive addition and removal of
-          components. 
-addcmp  - Add a model component by hand to the tentative model.
-uvrange - Set the min and max UV radii of usable visibilities.
+showmodel - Report detailed information about the current models.
+edmodel   - Edit the current models with an external editor.
+rmodel    - Read a new model for modelfit.
+mapplot   - Maplot allows interactive addition and removal of
+            components. 
+addcmp    - Add a model component by hand to the tentative model.
+uvrange   - Set the min and max UV radii of usable visibilities.

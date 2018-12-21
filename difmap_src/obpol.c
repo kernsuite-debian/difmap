@@ -6,10 +6,14 @@
 #include "obs.h"
 
 static GETPOL_FN(get_pol);
-static GETPOL_FN(get_ipol);
-static GETPOL_FN(get_qpol);
-static GETPOL_FN(get_upol);
-static GETPOL_FN(get_vpol);
+static GETPOL_FN(get_circular_ipol);
+static GETPOL_FN(get_circular_qpol);
+static GETPOL_FN(get_circular_upol);
+static GETPOL_FN(get_circular_vpol);
+static GETPOL_FN(get_linear_ipol);
+static GETPOL_FN(get_linear_qpol);
+static GETPOL_FN(get_linear_upol);
+static GETPOL_FN(get_linear_vpol);
 static GETPOL_FN(get_pi_pol);
 
 static int find_stokes(Observation *ob, Stokes pol);
@@ -84,22 +88,54 @@ int get_Obpol(Observation *ob, Stokes stokes, int report, Obpol *obpol)
     case SI:
       ptmp.pa = find_stokes(ob, RR);
       ptmp.pb = find_stokes(ob, LL);
-      ptmp.getpol = get_ipol;
+      ptmp.getpol = get_circular_ipol;
+/*
+ * If RR and LL aren't available, see if we can combine XX and YY instead.
+ */
+      if(ptmp.pa < 0 || ptmp.pb < 0) {
+        ptmp.pa = find_stokes(ob, XX);
+        ptmp.pb = find_stokes(ob, YY);
+        ptmp.getpol = get_linear_ipol;
+      }
       break;
     case SV:
       ptmp.pa = find_stokes(ob, RR);
       ptmp.pb = find_stokes(ob, LL);
-      ptmp.getpol = get_vpol;
+      ptmp.getpol = get_circular_vpol;
+/*
+ * If RR and LL aren't available, see if we can combine YX and XY instead.
+ */
+      if(ptmp.pa < 0 || ptmp.pb < 0) {
+        ptmp.pa = find_stokes(ob, YX);
+        ptmp.pb = find_stokes(ob, XY);
+        ptmp.getpol = get_linear_vpol;
+      }
       break;
     case SQ:
       ptmp.pa = find_stokes(ob, RL);
       ptmp.pb = find_stokes(ob, LR);
-      ptmp.getpol = get_qpol;
+      ptmp.getpol = get_circular_qpol;
+/*
+ * If RL and LR aren't available, see if we can combine XX and YY instead.
+ */
+      if(ptmp.pa < 0 || ptmp.pb < 0) {
+        ptmp.pa = find_stokes(ob, XX);
+        ptmp.pb = find_stokes(ob, YY);
+        ptmp.getpol = get_linear_qpol;
+      }
       break;
     case SU:
       ptmp.pa = find_stokes(ob, LR);
       ptmp.pb = find_stokes(ob, RL);
-      ptmp.getpol = get_upol;
+      ptmp.getpol = get_circular_upol;
+/*
+ * If LR and RL aren't available, see if we can combine XY and YX instead.
+ */
+      if(ptmp.pa < 0 || ptmp.pb < 0) {
+        ptmp.pa = find_stokes(ob, XY);
+        ptmp.pb = find_stokes(ob, YX);
+        ptmp.getpol = get_linear_upol;
+      }
       break;
     case NO_POL:   /* Substitute default polarization */
       if(ob_ready(ob, OB_SELECT, NULL) && ob->stream.pol.type != NO_POL) {
@@ -170,7 +206,7 @@ static GETPOL_FN(get_pol)
  *  out    Cvis *  The container to hold the extracted visibility of
  *                 the selected polarization.
  */
-static GETPOL_FN(get_ipol)
+static GETPOL_FN(get_circular_ipol)
 {
   Cvis *avis = pvis + pol->pa;  /* RR */
   Cvis *bvis = pvis + pol->pb;  /* LL */
@@ -211,7 +247,7 @@ static GETPOL_FN(get_ipol)
  *  out    Cvis *  The container to hold the extracted visibility of
  *                 the selected polarization.
  */
-static GETPOL_FN(get_qpol)
+static GETPOL_FN(get_circular_qpol)
 {
   Cvis *avis = pvis + pol->pa;  /* RL */
   Cvis *bvis = pvis + pol->pb;  /* LR */
@@ -252,7 +288,7 @@ static GETPOL_FN(get_qpol)
  *  out    Cvis *  The container to hold the extracted visibility of
  *                 the selected polarization.
  */
-static GETPOL_FN(get_upol)
+static GETPOL_FN(get_circular_upol)
 {
   Cvis *avis = pvis + pol->pa;  /* LR */
   Cvis *bvis = pvis + pol->pb;  /* RL */
@@ -293,7 +329,7 @@ static GETPOL_FN(get_upol)
  *  out    Cvis *  The container to hold the extracted visibility of
  *                 the selected polarization.
  */
-static GETPOL_FN(get_vpol)
+static GETPOL_FN(get_circular_vpol)
 {
   Cvis *avis = pvis + pol->pa;  /* RR */
   Cvis *bvis = pvis + pol->pb;  /* LL */
@@ -306,6 +342,170 @@ static GETPOL_FN(get_vpol)
   } else {
 /*
  * Get polarization V = (RR-LL)/2.
+ */
+    out->re = 0.5 * (avis->re - bvis->re);
+    out->im = 0.5 * (avis->im - bvis->im);
+/*
+ * Determine the combined weight.
+ */
+    out->wt = 4.0f/(1.0f/fabs(avis->wt) + 1.0f/fabs(bvis->wt));
+    if(avis->wt < 0.0f || bvis->wt < 0.0f)
+      out->wt = -out->wt;
+  };
+  return;
+}
+
+/*.......................................................................
+ * The function used to combine recorded XX and YY visibilities in an
+ * ob->dp->ifs[].chan[].base[].pol array to extract a visibility of
+ * stokes I = (XX+YY)/2.
+ *
+ * Input:
+ *  pol   Obpol *  The polarization descriptor containing the index of
+ *                 the polarization to be extracted.
+ *  pvis   Cvis *  A ob->dp->ifs[].chan[].base[].pol array of ob->npol
+ *                 polarized visibilities to extract the required
+ *                 visibility from.
+ * Input/Output:
+ *  out    Cvis *  The container to hold the extracted visibility of
+ *                 the selected polarization.
+ */
+static GETPOL_FN(get_linear_ipol)
+{
+  Cvis *avis = pvis + pol->pa;  /* XX */
+  Cvis *bvis = pvis + pol->pb;  /* YY */
+/*
+ * If either visibility is deleted, then the combined visibility is
+ * also deleted and its value is inconsequential.
+ */
+  if(avis->wt == 0.0f || bvis->wt == 0.0f) {
+    out->re = out->im = out->wt = 0.0f;
+  } else {
+/*
+ * Get polarization I = (XX+YY)/2.
+ */
+    out->re = 0.5 * (avis->re + bvis->re);
+    out->im = 0.5 * (avis->im + bvis->im);
+/*
+ * Determine the combined weight.
+ */
+    out->wt = 4.0f/(1.0f/fabs(avis->wt) + 1.0f/fabs(bvis->wt));
+    if(avis->wt < 0.0f || bvis->wt < 0.0f)
+      out->wt = -out->wt;
+  };
+  return;
+}
+
+/*.......................................................................
+ * The function used to combine recorded XY and YX visibilities in an
+ * ob->dp->ifs[].chan[].base[].pol array to extract a visibility of
+ * stokes U = (XY+YX)/2.
+ *
+ * Input:
+ *  pol   Obpol *  The polarization descriptor containing the index of
+ *                 the polarization to be extracted.
+ *  pvis   Cvis *  A ob->dp->ifs[].chan[].base[].pol array of ob->npol
+ *                 polarized visibilities to extract the required
+ *                 visibility from.
+ * Input/Output:
+ *  out    Cvis *  The container to hold the extracted visibility of
+ *                 the selected polarization.
+ */
+static GETPOL_FN(get_linear_upol)
+{
+  Cvis *avis = pvis + pol->pa;  /* XY */
+  Cvis *bvis = pvis + pol->pb;  /* YX */
+/*
+ * If either visibility is deleted, then the combined visibility is
+ * also deleted and its value is inconsequential.
+ */
+  if(avis->wt == 0.0f || bvis->wt == 0.0f) {
+    out->re = out->im = out->wt = 0.0f;
+  } else {
+/*
+ * Get polarization U = (XY+YX)/2.
+ */
+    out->re = 0.5 * (avis->re + bvis->re);
+    out->im = 0.5 * (avis->im + bvis->im);
+/*
+ * Determine the combined weight.
+ */
+    out->wt = 4.0f/(1.0f/fabs(avis->wt) + 1.0f/fabs(bvis->wt));
+    if(avis->wt < 0.0f || bvis->wt < 0.0f)
+      out->wt = -out->wt;
+  };
+  return;
+}
+
+/*.......................................................................
+ * The function used to combine recorded YX and XY visibilities in an
+ * ob->dp->ifs[].chan[].base[].pol array to extract a visibility of
+ * stokes V = i(YX-XY)/2.
+ *
+ * Input:
+ *  pol   Obpol *  The polarization descriptor containing the index of
+ *                 the polarization to be extracted.
+ *  pvis   Cvis *  A ob->dp->ifs[].chan[].base[].pol array of ob->npol
+ *                 polarized visibilities to extract the required
+ *                 visibility from.
+ * Input/Output:
+ *  out    Cvis *  The container to hold the extracted visibility of
+ *                 the selected polarization.
+ */
+static GETPOL_FN(get_linear_vpol)
+{
+  Cvis *avis = pvis + pol->pa;  /* YX */
+  Cvis *bvis = pvis + pol->pb;  /* XY */
+/*
+ * If either visibility is deleted, then the combined visibility is
+ * also deleted and its value is inconsequential.
+ */
+  if(avis->wt == 0.0f || bvis->wt == 0.0f) {
+    out->re = out->im = out->wt = 0.0f;
+  } else {
+/*
+ * Get polarization V = i(YX-XY)/2.
+ */
+    out->re = -0.5 * (avis->im - bvis->im);
+    out->im =  0.5 * (avis->re - bvis->re);
+/*
+ * Determine the combined weight.
+ */
+    out->wt = 4.0f/(1.0f/fabs(avis->wt) + 1.0f/fabs(bvis->wt));
+    if(avis->wt < 0.0f || bvis->wt < 0.0f)
+      out->wt = -out->wt;
+  };
+  return;
+}
+
+/*.......................................................................
+ * The function used to combine recorded XX and YY visibilities in an
+ * ob->dp->ifs[].chan[].base[].pol array to extract a visibility of
+ * stokes Q = (XX-YY)/2.
+ *
+ * Input:
+ *  pol   Obpol *  The polarization descriptor containing the index of
+ *                 the polarization to be extracted.
+ *  pvis   Cvis *  A ob->dp->ifs[].chan[].base[].pol array of ob->npol
+ *                 polarized visibilities to extract the required
+ *                 visibility from.
+ * Input/Output:
+ *  out    Cvis *  The container to hold the extracted visibility of
+ *                 the selected polarization.
+ */
+static GETPOL_FN(get_linear_qpol)
+{
+  Cvis *avis = pvis + pol->pa;  /* XX */
+  Cvis *bvis = pvis + pol->pb;  /* YY */
+/*
+ * If either visibility is deleted, then the combined visibility is
+ * also deleted and its value is inconsequential.
+ */
+  if(avis->wt == 0.0f || bvis->wt == 0.0f) {
+    out->re = out->im = out->wt = 0.0f;
+  } else {
+/*
+ * Get polarization Q = (XX-YY)/2.
  */
     out->re = 0.5 * (avis->re - bvis->re);
     out->im = 0.5 * (avis->im - bvis->im);

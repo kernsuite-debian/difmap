@@ -572,7 +572,8 @@ Modcmp *obremcmp(Observation *ob, Modcmp *cmp, int keep);
 
 /* Fit the variable part of the current models to the visibility residuals */
 
-int fituvmodel(Observation *ob, int niter, float uvmin, float uvmax);
+int fituvmodel(Observation *ob, int niter, float uvmin, float uvmax, int quiet);
+int show_model(Observation *ob, Model *mod, FILE *fd);
 
 void vlbhead(Observation *ob);
 
@@ -604,6 +605,7 @@ int ed_integ(Observation *ob, Subarray *sub, int ut, int cif, int doflag,
 int ed_flush(Observation *ob);
 
 Observation *uvaver(Observation *ob, float avtime, int scatter);
+int uvaver_time_smearing(Observation *ob, double avtime, double l, double m);
 
 char *Stokes_name(Stokes pol);
 Stokes Stokes_id(char *name);

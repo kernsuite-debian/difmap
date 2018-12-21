@@ -59,15 +59,22 @@ Modcmp *new_cmp(int modnum)
 /*
  * Initialise the model component before returning it.
  */
-  newcmp->next=NULL;
-  newcmp->flux=0.0;
-  newcmp->x=0.0;
-  newcmp->y=0.0;
-  newcmp->major=0.0;
+  newcmp->next = NULL;
+  newcmp->flux = 0.0;
+  newcmp->flux_err = 0.0;
+  newcmp->x = 0.0;
+  newcmp->x_err = 0.0;
+  newcmp->y = 0.0;
+  newcmp->y_err = 0.0;
+  newcmp->major = 0.0;
+  newcmp->major_err = 0.0;
   newcmp->ratio = 0.0;
+  newcmp->ratio_err = 0.0;
   newcmp->phi = 0.0;
+  newcmp->phi_err = 0.0;
   newcmp->freq0 = 0.0;
   newcmp->spcind = 0.0;
+  newcmp->spcind_err = 0.0;
   return newcmp;
 }
 
@@ -604,7 +611,7 @@ int wmodel(Model *mod, float east, float north, int docut, float cut, FILE *fd)
 /*
  * Label the file columns.
  */
-  lprintf(fd, "! Flux (Jy) Radius (mas)  Theta (deg)  Major (mas)  Axial ratio   Phi (deg) T \\\n! Freq (Hz)     SpecIndex\n");
+  lprintf(fd, "! Flux (Jy) Radius (mas)  Theta (deg)  Major FWHM (mas)  Axial ratio   Phi (deg) T \\\n! Freq (Hz)     SpecIndex\n");
 /*
  * No components to be written?
  */
@@ -1246,3 +1253,33 @@ Model *cpy_Model(Model *mod)
   };
   return newmod;
 }
+
+/*.......................................................................
+ * Return a string naming a given type of model component.
+ *
+ * Input:
+ *   type        Modtyp     The type to be named.
+ * Output:
+ *   return   const char *  The name of the type.
+ */
+const char *modtyp_name(Modtyp type)
+{
+  switch(type) {
+  case M_DELT:
+    return "point";
+  case M_GAUS:
+    return "gauss";
+  case M_DISK:
+    return "disk";
+  case M_ELLI:
+    return "sphere";
+  case M_RING:
+    return "ring";
+  case M_RECT:
+    return "rect";
+  case M_SZ:
+    return "SZ";
+  }
+  return "unknown";
+}
+

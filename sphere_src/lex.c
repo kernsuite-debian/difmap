@@ -198,18 +198,12 @@ int com_init(const char *bootenv)
  */
 Table *lex_expr(char optyp)
 {
-  static int is_start;
   static size_t slen;
   static char c;
   static short int shint;
   static float fnum;
   static double num;
   static Table ret_table, *ttst;
-/*
- * Set a flag to indicate if the next token comes from the start of
- * a new line.
- */
-  is_start = (comline.next == com[comlev].ppbuff);
 /*
  * Find the next non-white-space character.
  */
@@ -1540,16 +1534,11 @@ int pause_output(void)
  */
 static CPL_MATCH_FN(tecla_match_fn)
 {
-  char *stab;        /* The symbol table to look up the word in */
   CplFileArgs cfa;   /* The control parameters of cpl_file_completions() */
   int word_start;    /* The start of the word to be completed */
   int word_len;      /* The length of the word to be completed */
   int c;             /* A character being tested */
   int i,j;
-/*
- * Get the symbol table to look up command names in.
- */
-  stab = data;
 /*
  * Search backwards for the start of a symbol to be completed.
  */

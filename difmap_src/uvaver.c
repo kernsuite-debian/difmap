@@ -8,6 +8,7 @@
 #include "utbin.h"
 #include "vlbconst.h"
 #include "obedit.h"
+#include "units.h"
 
 /*
  * Class to record the details of the next un-averaged solution bin in a
@@ -57,6 +58,46 @@ static UVaver *del_UVaver(UVaver *av);
 static int dp_aver(Observation *ob, UVaver *av, Solbin *sbin);
 
 static Observation *uvend(Observation *ob, UVaver *av);
+
+/*
+ * Declare the container that uvaver_uvextent() uses to accumulate
+ * information about the maximum U or V extents of visibilities binned
+ * into time bins of a specified duration.
+ */
+typedef struct {
+  double d;      /* The maximum U or V distance (wavelengths) */
+  Subarray *sub; /* The subarray where the maximum extent was found */
+  int base;      /* The baseline where the maximum extent was found */
+  int cif;       /* The IF where the maximum extent was found */
+  int fc;        /* The frequency channel where the max extent was found */
+  int pol;       /* The polarization where the max extent was found */
+} VisMaxExtent;
+
+/*
+ * Declare a container for accumulating the range of U and V
+ * coordinates of all visibilities of a particular combination of IF,
+ * sub-array, baseline and polarization within a given time bin.
+ */
+typedef struct {
+  size_t nvis;       /* The number of binned visibilities */
+  float minu, maxu;  /* The range of U coordinates in the bin */
+  float minv, maxv;  /* The range of V coordinates in the bin */
+} VisUVExtent;
+
+/*
+ * The resource object used to accumulate the maximum U and V
+ * extents of time-binned visibilities.
+ */
+typedef struct {
+  Biniter *iter;         /* An iterator over time bins */
+  size_t nvis;           /* The maximum number of visibilities */
+                         /*  within a single integration. */
+  VisUVExtent *extents;  /* UV extent for nvis visibilities */
+} BinnedUVExtents;
+
+static int uvaver_uvextent(Observation *ob, double avtime,
+                           VisMaxExtent *umax, VisMaxExtent *vmax);
+static int end_uvaver_uvextent(BinnedUVExtents *ext, int waserr);
 
 /*.......................................................................
  * Perform a coherent average of a UV data set and shrink the data-set
@@ -627,5 +668,354 @@ static UVaver *del_UVaver(UVaver *av)
     free(av);
   };
   return NULL;
+}
+
+/*.......................................................................
+ * Compute approximately by how much a source at a given distance from
+ * the pointing center will be weakened if the visibilites are
+ * averaged over a specified duration.
+ *
+ * Input:
+ *  ob   Observation *  The descriptor of the observation to be checked.
+ *  avtime    double    The solution bin width (seconds).
+ *  l,m       double    The eastward and northward position of the source
+ *                      relative to the pointing center (radians).
+ * Output:
+ *  return       int     0 - OK.
+ *                       1 - Error.
+ */
+int uvaver_time_smearing(Observation *ob, double avtime, double l, double m)
+{
+  int waserr = 0;    /* True if an error occurred */
+  VisMaxExtent umax; /* Details of the maximum U-axis extent found */
+  VisMaxExtent vmax; /* Details of the maximum V-axis extent found */
+  double scale;      /* The scale factor applied by time smearing */
+/*
+ * For each set of visibilities that would be averaged if uvaver was
+ * called with the same values of ob and avtime, calculate the width
+ * and height of the UV plane extent of the combined visibilities.
+ * Return the maximum of these extents.
+ */
+  waserr = waserr || uvaver_uvextent(ob, avtime, &umax, &vmax);
+  if(!waserr) {
+    lprintf(stdout, "Maximum U extent: %g on baseline %d:%s-%s in IF %d, ch %d, pol %s\n",
+            umax.d, (int) (umax.sub - ob->sub) + 1,
+            umax.sub->tel[umax.sub->base[umax.base].tel_a].name,
+            umax.sub->tel[umax.sub->base[umax.base].tel_b].name,
+            umax.cif+1, umax.fc+1, Stokes_name(ob->pols[umax.pol]));
+    lprintf(stdout, "Maximum V extent: %g on baseline %d:%s-%s in IF %d, ch %d, pol %s\n",
+            vmax.d, (int) (vmax.sub - ob->sub) + 1,
+            vmax.sub->tel[vmax.sub->base[vmax.base].tel_a].name,
+            vmax.sub->tel[vmax.sub->base[vmax.base].tel_b].name,
+            vmax.cif+1, vmax.fc+1, Stokes_name(ob->pols[vmax.pol]));
+/*
+ * Averaging visibilities in the UV plane over a distance of du is
+ * equivalent to applying a boxcar smoothing function to the
+ * visibility plane. This is a convolution operation in the UV plane,
+ * so in the image plane it multiplies the image by the Fourier
+ * transform of a boxcar, which is a sync function,
+ * sin(pi.du.l)/(pi.du.l), where l is any eastward offset from
+ * the pointing center. Similarly for dv at the offset m.
+ */
+    {
+      double uarg = pi * umax.d * l;
+      double varg = pi * vmax.d * m;
+/*
+ * Compute the sinc function scale factors, using a taylor expansion
+ * of the sinc function for small values where sin(x)/x is unstable.
+ */
+      double uscale = (uarg > 0.01) ? (sin(uarg) / uarg) : (1.0 - uarg*uarg / 6.0);
+      double vscale = (varg > 0.01) ? (sin(varg) / varg) : (1.0 - varg*varg / 6.0);
+/*
+ * Combine the scale factors.
+ */
+      scale = uscale * vscale;
+    }
+    lprintf(stdout, "Potential flux reduction at x=%g,y=%g %s: %.2g percent\n",
+            radtoxy(l), radtoxy(m), mapunits(U_TLAB), (1.0 - scale) * 100);
+  }
+  return waserr;
+}
+
+/*.......................................................................
+ * For each set of visibilities that would be averaged if uvaver was
+ * called with the same values of ob and avtime, calculate the width
+ * and height of the UV plane extent of the combined visibilities,
+ * then return the maximum of these extents.
+ *
+ * Input:
+ *  ob      Observation *  The descriptor of the observation to be checked.
+ *  avtime       double    The solution bin width (seconds).
+ * Input/Output:
+ *  umax   VisMaxExtent *  Information on the maximum U-axis extent found.
+ *  vmax   VisMaxExtent *  Information on the maximum V-axis extent found.
+ * Output:
+ *  return       int    0 - OK.
+ *                      1 - Error.
+ */
+static int uvaver_uvextent(Observation *ob, double avtime,
+                           VisMaxExtent *umax, VisMaxExtent *vmax)
+{
+  BinnedUVExtents *ext;  /* The object to be returned */
+  Solbin *sbin;          /* A solution bin */
+  int cif;               /* An IF index */
+  int fc;                /* A frequency channel index */
+  int base;              /* A baseline index */
+  int pol;               /* A polarization index */
+  int i;
+/*
+ * Check the arguments.
+ */
+  if(!ob) {
+    lprintf(stderr, "uvaver_uvextent: NULL observation.\n");
+    return 1;
+  }
+/*
+ * Initialize the return containers.
+ */
+  umax->d = 0.0;
+  umax->sub = NULL;
+  umax->base = 0;
+  umax->cif = 0;
+  umax->fc = 0;
+  umax->pol = 0;
+  *vmax = *umax;
+/*
+ * Allocate the container.
+ */
+  ext = malloc(sizeof(BinnedUVExtents));
+  if(!ext) {
+    lprintf(stderr, "uvaver_uvextent: Insufficient memory.\n");
+    return end_uvaver_uvextent(ext, 1);
+  }
+/*
+ * Before attempting any operation that might fail, initialize the
+ * container at least up to the point at which it can safely be passed
+ * to end_uvaver_uvextent().
+ */
+  ext->iter = NULL;
+  ext->nvis = ob->nif * ob->nchan * ob->nbmax * ob->npol;
+  ext->extents = NULL;
+/*
+ * Attempt to allocate the same solution bin iterator that would be
+ * used by uvaver().
+ */
+  ext->iter = new_Biniter(ob, avtime);
+  if(!ext->iter)
+    return end_uvaver_uvextent(ext, 1);
+/*
+ * Allocate the array in which visibility extents will be accumulated
+ * while processing a single integration bin. This array will be
+ * reinitialized at the start of processing each bin, so we don't
+ * waste time initializing its contents here.
+ */
+  ext->extents = malloc(sizeof(VisUVExtent) * ext->nvis);
+  if(!ext->extents) {
+    lprintf(stderr, "new_BinnedUVExtents: Insufficient memory.\n");
+    return end_uvaver_uvextent(ext, 1);
+  }
+/*
+ * Flush any cached edits.
+ */
+  if(ed_flush(ob))
+    return end_uvaver_uvextent(ext, 1);
+/*
+ * Initialize to read whole integrations.
+ */
+  if(dp_crange(ob->dp, 0, ob->nchan-1) ||
+     dp_irange(ob->dp, 0, ob->nif-1)   ||
+     dp_brange(ob->dp, 0, ob->nbmax-1) ||
+     dp_srange(ob->dp, 0, ob->npol-1))
+    return end_uvaver_uvextent(ext, 1);
+/*
+ * Process one time-bin at a time.
+ */
+  while((sbin=nextbin(ext->iter)) != NULL) {
+/*
+ * Get a pointer to the start of the array of accumulated
+ * extents of binned visibilities.
+ */
+    VisUVExtent *extent = ext->extents;
+/*
+ * Determine the number of baselines in the sub-array of the latest solution
+ * bin.
+ */
+    int nbase = sbin->sub->nbase;
+/*
+ * Initialize the accumulated extents.
+ */
+    for(i=0; i<ext->nvis; i++, extent++) {
+      extent->nvis = 0;
+      extent->minu = extent->maxu = extent->minv = extent->maxv = 0.0;
+    }
+/*
+ * Process each integration of the solution bin.
+ */
+    Integration *integ = sbin->integ;
+    for(i=0; i<sbin->ntime; i++,integ++) {
+/*
+ * Rewind 'extent' to the start of the array of per visibility extents.
+ */
+      extent = ext->extents;
+/*
+ * Read the next un-averaged integration to be included in the bin and
+ * apply self-cal and resoff corrections, so that any visibilities that
+ * get flagged during calibration can be ignored.
+ */
+      if(dp_read(ob->dp, integ->irec) || dp_cal(ob)) {
+        return end_uvaver_uvextent(ext, 1);
+/*
+ * Accumulate the weighted mean U,V,W for each baseline.
+ */
+      } else {
+/*
+ * Loop through each IF in the input integration record.
+ */
+        Dif *ifs = ob->dp->ifs;
+        If *ifp = ob->ifs;
+        for(cif=0; cif<ob->nif; cif++,ifs++,ifp++) {
+/*
+ * Loop through all spectral-line channels in the current IF.
+ */
+          Dchan *dchan = ifs->chan;
+          for(fc=0; fc<ob->nchan; fc++,dchan++) {
+/*
+ * Get the UV coordinate scale factor for this channel.
+ */
+            float uvscale = ifp->freq + fc * ifp->df;
+/*
+ * Loop through each baseline, and for each baseline accumulate the
+ * weighted mean U,V,W coordinates and the sum of weights.
+ */
+            Visibility *vis = integ->vis;  /* Input visibility */
+            Dbase *dbase = dchan->base;
+            for(base=0; base<nbase; base++,dbase++,vis++) {
+/*
+ * Loop through each polarization recorded on the current baseline.
+ */
+              Cvis *cvis = dbase->pol;
+              for(pol=0; pol<ob->npol; pol++,cvis++,extent++) {
+/*
+ * Only use look at unflagged visibilities.
+ */
+                if(cvis->wt > 0.0) {
+/*
+ * Scale UV distances from light-second units to wavelengths.
+ */
+                  float u = vis->u * uvscale;
+                  float v = vis->v * uvscale;
+/*
+ * Update the range of U and V seen in the current bin.
+ */
+                  if(extent->nvis == 0) {
+                    extent->minu = extent->maxu = u;
+                    extent->minv = extent->maxv = v;
+                  } else {
+                    if(u < extent->minu)
+                      extent->minu = u;
+                    else if (u > extent->maxu)
+                      extent->maxu = u;
+                    if(v < extent->minv)
+                      extent->minv = v;
+                    else if (v > extent->maxv)
+                      extent->maxv = v;
+                  }
+/*
+ * Update the number of visibilities that contributed
+ * to this range.
+ */
+                  extent->nvis++;
+                }
+              }
+	    }
+	  }
+	}
+      }
+    }
+/*
+ * Find the maximum U and V ranges found so far.
+ */
+    extent = ext->extents;
+    for(cif=0; cif<ob->nif; cif++) {
+      for(fc=0; fc<ob->nchan; fc++) {
+        for(base=0; base<nbase; base++) {
+          for(pol=0; pol<ob->npol; pol++,extent++) {
+            if(extent->nvis > 0) {
+              double du = extent->maxu - extent->minu;
+              double dv = extent->maxv - extent->minv;
+/*
+ * Store the latest U extent if it is the max seen so far.
+ */
+              if(!umax->sub || du > umax->d) {
+                umax->d = du;
+                umax->sub = sbin->sub;
+                umax->base = base;
+                umax->cif = cif;
+                umax->fc = fc;
+                umax->pol = pol;
+              }
+/*
+ * Store the latest V extent if it is the max seen so far.
+ */
+              if(!vmax->sub || dv > vmax->d) {
+                vmax->d = dv;
+                vmax->sub = sbin->sub;
+                vmax->base = base;
+                vmax->cif = cif;
+                vmax->fc = fc;
+                vmax->pol = pol;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+/*
+ * Complain if no visibilities were found.
+ */
+  if(!umax->sub || !vmax->sub) {
+    lprintf(stderr, "uvaver_uvextent: No visibilities found.\n");
+    return end_uvaver_uvextent(ext, 1);
+  }
+/*
+ * Relinquish allocated resources while returning.
+ */
+  return end_uvaver_uvextent(ext, 0);
+}
+
+/*.......................................................................
+ * This is a private cleanup function of uvaver_uvextent(). It
+ * relinquishes the resources contained in the ext object, if any, then
+ * returns the specified function completion status.
+ *
+ * Input:
+ *  ext    BinnedUVExtents *  The object to be deleted.
+ *  waserr             int    The completion status of uvaver_uvextent():
+ *                             0 - completed successfully.
+ *                             1 - Aborted by an error.
+ * Output:
+ *  return             int    The value of the waserr argument.
+ */
+static int end_uvaver_uvextent(BinnedUVExtents *ext, int waserr)
+{
+  if(ext) {
+/*
+ * Delete the iterator if one was allocated.
+ */
+    ext->iter = del_Biniter(ext->iter);
+/*
+ * Delete the array of accumulated extents.
+ */
+    if(ext->extents) {
+      free(ext->extents);
+      ext->extents = NULL;
+    }
+/*
+ * Delete the container.
+ */
+    free(ext);
+  }
+  return waserr;
 }
 

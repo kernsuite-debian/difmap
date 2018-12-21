@@ -764,7 +764,7 @@ static int r_axes(R_par *rp, int axcol)
 /*
  * Compose and plot a title.
  */
-  sprintf(awrk, "%.16s\\fr at \\fn%.3f GHz in %s  %s",
+  snprintf(awrk, sizeof(awrk), "%.16s\\fr at \\fn%.3f GHz in %s  %s",
 	  ob->source.name, getfreq(ob,-1)/1.0e9,
 	  Stokes_name(ob->stream.pol.type),
 	  sutdate(ob->date.year, ob->date.ut, bwrk));
@@ -777,10 +777,10 @@ static int r_axes(R_par *rp, int axcol)
  * Label the X axis.
  */
   if(rp->doproj) {
-    sprintf(awrk, "Radial UV distance along P.A. %g^  (%s)",
+    snprintf(awrk, sizeof(awrk), "Radial UV distance along P.A. %g^  (%s)",
 	    rp->proj.phi*rtod, uvwunits(U_PLAB));
   } else {
-    sprintf(awrk, "UV radius  (%s)", uvwunits(U_PLAB));
+    snprintf(awrk, sizeof(awrk), "UV radius  (%s)", uvwunits(U_PLAB));
   };
   cpgmtxt("B", botsep, 0.5f, 0.5f, awrk);
 /*
@@ -1226,7 +1226,8 @@ static void r_namplt(R_par *rp, int erase)
  */
   if(rp->highlight) {
     cpgsci(erase?0:1);
-    sprintf(title, "%d:%s", refsub+1, rp->ob->sub[refsub].tel[reftel].name);
+    snprintf(title, sizeof(title), "%d:%s", refsub+1,
+             rp->ob->sub[refsub].tel[reftel].name);
     cpgmtxt("T", 1.0f, 1.0f, 1.0f, title);
     cpgsci(1);
   };
@@ -2657,13 +2658,8 @@ static int r_newmode(R_par *rp, int ch_ed)
  */
 static int r_mlab(R_par *rp, int erase)
 {
-  Observation *ob;  /* The descriptor of the observation being plotted */
   int oldcol;       /* Temporary storage for entry color index */
   char label[81];   /* Temporary work string to compose mode label in */
-/*
- * Get the descriptor of the observation.
- */
-  ob = rp->ob;
 /*
  * Store the existing plot color.
  */
@@ -2678,7 +2674,8 @@ static int r_mlab(R_par *rp, int erase)
 /*
  * Compose the mode label.
  */
-  sprintf(label, "Edit %s channels.", rp->ch_ed ? "selected" : "all");
+  snprintf(label, sizeof(label), "Edit %s channels.",
+           rp->ch_ed ? "selected" : "all");
 /*
  * Plot mode line.
  */

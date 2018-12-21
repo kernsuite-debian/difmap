@@ -773,7 +773,7 @@ static int t_plaxes(Tpar *tp, int erase)
  */
   cpgsch(0.6f);
   for(itel=0; itel<sub->nstat; itel++) {
-    sprintf(label, "%s\\(0699)", sub->tel[itel].name);
+    snprintf(label, sizeof(label), "%s\\(0699)", sub->tel[itel].name);
     cpgptxt(0.0f, (float) itel, 0.0f, 1.0f, label);
   };
   cpgsch(ch);
@@ -1069,7 +1069,6 @@ static int t_cursor(Tpar *tp, int noout, Bandmode mode, float xref, float yref,
 static int t_label(Tpar *tp)
 {
   Observation *ob;      /* The descriptor of the observation being plotted */
-  Subarray *sub;        /* The descriptor of the sub-array being plotted */
   char awrk[81];        /* Work string for labelling */
   char bwrk[81];        /* Work string for labelling */
 /*
@@ -1080,10 +1079,9 @@ static int t_label(Tpar *tp)
     return -1;
   };
 /*
- * Get the descriptors of the observation and sub-array being plotted.
+ * Get the descriptors of the observation.
  */
   ob = tp->ob;
-  sub = tp->sub;
 /*
  * Set the viewport around the plot grid.
  */
@@ -1093,10 +1091,10 @@ static int t_label(Tpar *tp)
  */
   cpgsci(1);
   cpgsch(1.0f);
-  sprintf(awrk, "%s  %s", ob->source.name,
+  snprintf(awrk, sizeof(awrk), "%s  %s", ob->source.name,
 	  sutdate(ob->date.year, ob->date.ut, bwrk));
   cpgmtxt("T", 1.7f, 0.0f, 0.0f, awrk);
-  sprintf(awrk, "Time sampling in IF %d  Sub-array %d  Pol %s",
+  snprintf(awrk, sizeof(awrk), "Time sampling in IF %d  Sub-array %d  Pol %s",
 	  ob->stream.cif+1, tp->ss.isub+1, Stokes_name(ob->stream.pol.type));
   cpgmtxt("T", 0.5f, 0.0f, 0.0f, awrk);
 /*
@@ -1693,13 +1691,8 @@ static int t_edbox(Tpar *tp, int flag)
  */
 static int t_mlab(Tpar *tp, int erase)
 {
-  Observation *ob;  /* The descriptor of the observation being plotted */
   int oldcol;       /* Temporary storage for entry color index */
   char label[81];   /* Temporary work string to compose mode label in */
-/*
- * Get the descriptor of the observation.
- */
-  ob = tp->ob;
 /*
  * Store the existing plot color.
  */
@@ -1715,7 +1708,7 @@ static int t_mlab(Tpar *tp, int erase)
 /*
  * Compose the mode label.
  */
-  sprintf(label, "Edit %s channels of %s.",
+  snprintf(label, sizeof(label), "Edit %s channels of %s.",
 	  tp->ch_ed ? "selected" : "all",
 	  tp->if_ed ? "the displayed IF" : "all IFs");
 /*

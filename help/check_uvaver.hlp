@@ -1,0 +1,156 @@
+aver_time, east, north
+Check if a given averaging time would cause time smearing.
+
+EXAMPLE
+-------
+
+ 0>check_uvaver 60,11,11
+ Maximum U extent: 849.469 on baseline 1:A074-A078 in IF 4, ch 8, pol XX
+ Maximum V extent: 71.7559 on baseline 1:A077-A078 in IF 4, ch 8, pol XX
+ Potential flux reduction at x=11,y=11 arcsec: 0.34 %
+ 0>
+
+In the above, any the lines that don't begin with a 0> prompt are
+messages displayed by the check_uvaver command.
+
+PARAMETERS
+----------
+aver_time - The duration of the new integrations in seconds.
+
+east      - The eastward offset of a position of interest, relative
+            to the pointing center (ie. the center of the map).
+            Unless the mapunits command has been used to change the
+            default units used for distances, the eastward offset
+            should be specified in milli-arcseconds.
+
+north     - The northward offset of a position of interest, relative
+            to the pointing center (ie. the center of the map).
+            Unless the mapunits command has been used to change the
+            default units used for distances, the northward offset
+            should be specified in milli-arcseconds.
+
+CONTEXT
+-------
+Time averaging of visibilities can smear sources, especially sources
+far from the map center. For this reason, before using the uvaver
+command to perform time averaging, it is recommended that the
+check_uvaver command be used to see whether any important sources
+within the map will be badly affected by the chosen averaging
+time. The amount of smearing suffered by a source depends on where it
+is in the map. It is worse for sources further away from the center of
+the map, and along directions parallel to the longest tracks in the UV
+plane.
+
+For each averaged output visibility, the uvaver command combines
+multiple visibilities from neigboring times. These visibilities are
+also close to each other in the UV plane, such that each averaged
+visibility comes from a spread of UV coordinates. This essentially
+smooths the visibilities in the UV plane, which has the effect of
+scaling the image plane with the Fourier transform of the smoothing
+window. The scaling function is unity at the origin of the map, but
+decreases further from the origin, such that sources further from the
+map center are scaled down more in flux. Unfortunately, the scaling
+effect differs from one averaged visibility to the next, so the
+scaling depends on spatial frequency. This is why sources appear
+smeared rather than just being weaker than they should be.
+
+The check_uvaver command finds the averaged visibility that suffers
+most from the above effect, and it reports the flux weakening due to
+this visibility. This makes it a pessimistic estimate of how much a
+source would actually be weakened by uvaver.
+
+Since the estimated flux reduction is derived from the worst affected
+visibility, it should be safe to time-average the visibilities if the
+reported flux loss is no more than a few percent.
+
+Since the time-averaging degredation varies from one part of the map
+to another, the check_uvaver command requires you to specify a
+position in the map. If the UV coverage of the observation (see
+uvplot) has a similar width in all directions, and you just wish to
+know the worst case effect on any source within the primary beam, then
+you can just set the east argument to the radius of the primary beam,
+and the north argument to zero. On the other hand, if the UV coverage
+is very asymmetric, it will be necessary to explore the affect at
+different sources of interest, by specifying their locations as
+eastward and northward offsets from the map center using the east and
+north arguments.
+
+THEORY
+------
+Imagine a time sequence of visibilities from a single baseline. Now
+collect these visibilities into a succession of time bins, each of
+duration aver_time. In the UV plane the locations of the visibilities
+in each bin will trace out a short line, due to the rotation of the
+Earth, which slowly changes the projected length and orientation of
+the baseline. For the moment, imagine that each of these short lines
+of visibilities just happen to fit within boxes of width du along the
+U axis, and dv along the V axis. If we take the visibilities within
+each of these boxes and compute their averages to obtain averaged
+visibilities, then the effect is as though we had applied a two
+dimensional boxcar smoothing function to the visibilities in the UV
+plane, or size du x dv. In other words the UV plane has effectively
+been convolved with a top-hat function of width du along the U axis,
+followed by a top-hat function of height dv along the V axis. This
+convolution in the Fourier plane results in the image plane being
+multiplied by the Fourier transforms of these top-hat functions, which
+are sync functions. These sync functions are unity at the origin, but
+decrease with increasing distance from the map center, so they mostly
+affect sources far from the map center.
+
+A top-hat function of width du in the UV plane can be written as:
+
+     f(u) = 1/du where |u| < du/2, and 0 elsewhere.
+
+Note that the u coordinate here is a unitless number of wavelengths,
+whereas some published works use light-seconds, which need to be
+scaled by the observing frequency to obtain the u coordinate given
+here.
+
+The Fourier transform of the above top-hat function is:
+
+     F(l) = sin(pi*du*l) / (pi*du*l)
+
+Here, l is an eastward offset from the map center. The combined effect
+of the two dimensional smoothing by du and dv is:
+
+     R(l,m) = sin(pi*du*l) / (pi*du*l) * sin(pi*dv*m) / (pi*dv*m)
+
+The above treatment assumes that all time bins contain visibilities
+bounded by identically sized boxes in the UV plane. In practice this
+is rarely true. Bins further from the origin of the UV plane tend to
+cover larger areas of the UV plane, which means that the actual flux
+reductions due to time averaging vary, generally increasing with
+spatial frequency. This is why sources tend to be smeared by time
+averaging, rather than just being scaled down in flux, which is what
+the above treatment would otherwise imply.
+
+Since the regions covered by the bins in the UV plane vary in size,
+the check_uvaver command searches for the averaged visibility that
+originates from the widest area in the UV plane. This yields the worst
+case flux reduction. This reduction may only apply to a few other
+averaged visibilities, so if the reported worst-case reduction is
+small, then the user can be confident that sources at the specified
+position will not be significantly affected.
+
+A similar treatment of this effect, with the same result, can be
+found in VLA Scientific Memorandum No. 137. Currently this can
+be obtained from:
+
+  https://library.nrao.edu/public/memos/vla/sci/VLAS_137.pdf
+
+Beware that in the above work, the U and V coordinates are distances
+in units of light-seconds, which is why their equation scales these
+coordinates by the frequency of observation, whereas the equations
+given above do not.
+
+Another treatment can be found in the following book. However beware
+that this suffers from some errors. Specifically, equation 18-30
+scales the U and V coordinates by the observing frequency, which
+implies that U and V are in light-second units, whereas equation 18-31
+omits the frequency, which implies that U and V are actually numbers
+of wavelengths. Also 18-31 should be scaled by the averaging time, Ta,
+which is mentioned in the text just before it, but omitted from the
+equation.
+
+  Authors: Bridle, A. H. & Schwab, F. R.
+  Journal: Synthesis Imaging in Radio Astronomy II, A Collection of Lectures from the Sixth NRAO/NMIMT Synthesis Imaging Summer School. Edited by G. B. Taylor, C. L. Carilli, and R. A. Perley. ASP Conference Series, Vol. 180, 1999, p. 371.

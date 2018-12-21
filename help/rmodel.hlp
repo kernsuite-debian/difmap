@@ -42,7 +42,8 @@ to use the wmodel command before using rmodel.
 
 RELATED COMMANDS
 ----------------
-startmod - Self-calibrate an observation with a temporary point-source
-           model.
-wmodel   - Write clean models to a VLBI model file.
-save     - Save all data files and the difmap running parameters.
+startmod  - Self-calibrate an observation with a temporary point-source
+            model.
+wmodel    - Write clean models to a VLBI model file.
+showmodel - Report detailed information about the current models.
+save      - Save all data files and the difmap running parameters.

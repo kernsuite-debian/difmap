@@ -35,23 +35,51 @@ doscatter - Default: FALSE
 CONTEXT
 -------
 
-There are two main things that people commonly use uvaver for. The
-obvious one is to reduce redundantly high time sampling. This speeds
-up subsequent processing. The less obvious use is to re-bin the
-data. This is useful if the data that were read in from a FITS file
-had different time-stamps on different baselines within the same
-logical integration. In this case when difmap reads such a file 
-the end result is that each baseline is assigned its own integration!
-Not only does this waste large amounts of memory and subsequent CPU
-time, but it also means that station-based editing in vplot actually
-does baseline-based editing, and selfcal, when run without a solution
-time will not make any corrections due to the lack data within each
-integration. The solution is to re-bin the data into integrations with
-selfcal.
+There are three main things that people commonly use uvaver for.
 
-You should be careful to choose an averaging time, that will not
-smooth over real variations in the UV data. If you choose too large a
-time scale, large scale structures will disappear from your map.
+1. The obvious application is to reduce redundantly high time sampling
+   to speed up subsequent processing.
+
+2. When the doscatter argument is true, the statistical weight of each
+   averaged visibility is recomputed from the scatter of the original
+   visibilities that contributed to it.
+
+   This is very useful when the weights in the original FITS file were
+   not the reciprocal of the variance of the real and imaginary parts,
+   as difmap expects. In such cases, unless uvaver is used to replace
+   these weights, then the modelfit command will not report the
+   correct values for either chi-squared or the estimated
+   uncertainties of fitted parameters.
+
+3. Finally, a less obvious use is to bring together visibilities on
+   different baselines that were sampled at slightly different
+   times.
+
+   This is useful when the data that were read in from a FITS file had
+   slightly different time-stamps on different baselines within the
+   same logical integration. In this case when difmap reads such a
+   file the end result is that each baseline is assigned to its own
+   integration.  Not only does this waste large amounts of memory and
+   subsequent CPU time, but it also means that station-based editing
+   in vplot actually does baseline-based editing, and selfcal, when
+   run without a solution time, will not make any corrections due to
+   the lack data within each integration. The solution is to re-bin
+   the data into integrations with selfcal.
+
+CAVEAT
+------
+
+Beware that long averaging times can significantly smooth real
+variations in the UV data. This can have harmful effects on the
+resulting map, especially on features in the image that are far from
+the center of the map. The effects include a reduction in flux that
+varies with spatial frequency and thus produces a smearing effect.
+
+To avoid this, before you use the uvaver command, you are advised to
+use the check_uvaver command to get an idea of how much effect a given
+averaging time will have on important regions of the map.
+
+See 'help check_uvaver' for more information.
 
 CAUTION: *** If uvaver fails you may loose your data ***
 --------------------------------------------------------
@@ -84,3 +112,8 @@ and time-stamps are recorded in memory as before.
 
 Solution bins are regularly spaced on a grid of width equal to the
 averaging time. Input integrations are binned onto this grid.
+
+RELATED COMMANDS
+----------------
+check_uvaver  -  Check if a given averaging time would cause time smearing.
+
