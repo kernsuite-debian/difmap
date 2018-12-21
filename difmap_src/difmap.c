@@ -309,6 +309,9 @@ static Template(map_to_rad_fn);
 static Template(rad_to_map_fn);
 static Template(uv_to_wav_fn);
 static Template(wav_to_uv_fn);
+static Template(showmodel_fn);
+static Template(check_uvaver_fn);
+static Template(model_flux_fn);
 
 /*
  * Declare the function types below.
@@ -322,8 +325,8 @@ static Functype dmapf_type[] = {
    {uvrange_fn, NORM, 0,2,   " ff",     " 00",     " vv",   1 },
    {uvwgt_fn,   NORM, 0,3,   " ffl",    " 000",    " vvv",  1 },
    {uvzero_fn,  NORM, 0,2,   " ff",     " 00",     " vv",   1 },
-   {maplot_fn,  NORM, 0,2,   " Cl",     " 00",     " vv",   1 },
-   {maplot_fn,  NORM, 0,2,   " Cl",     " 00",     " vv",   1 },
+   {maplot_fn,  NORM, 0,3,   " Cll",    " 000",    " vvv",  1 },
+   {maplot_fn,  NORM, 0,3,   " Cll",    " 000",    " vvv",  1 },
    {clean_fn,   NORM, 0,3,   " iff",    " 000",    " vvv",  1 },
    {restore_fn, NORM, 0,5,   " fffll",  " 00000",  " vvvvv",1 },
    {wbeam_fn,   NORM, 1,1,   " C",      " 0",      " v",    1 },
@@ -385,7 +388,7 @@ static Functype dmapf_type[] = {
    {addmc_fn,   NORM,4,15,   " flfflflflfliffl"," 000000000000000"," vvvvvvvvvvvvvvv",1},
    {uvstat_fn,  NORM, 1,1,   "fC",      "00",      "vv",    1 },
    {imstat_fn,  NORM, 1,1,   "fC",      "00",      "vv",    1 },
-   {setcont_fn, NORM, 0,0,   " ",       " ",       " ",     1 },
+   {setcont_fn, NORM, 0,1,   " l",      " 0",      " v",    1 },
    {mapcol_fn,  NORM, 0,3,   " Cff",    " 000",    " vvv",  1 }, 
    {mapfun_fn,  NORM, 0,3,   " Cff",    " 000",    " vvv",  1 },
    {showpar_fn, NORM, 0,0,   " ",       " ",       " ",     1 },
@@ -423,6 +426,9 @@ static Functype dmapf_type[] = {
    {rad_to_map_fn,   NORM, 1,1,  "ff",   "00",     "vv",    0 },
    {uv_to_wav_fn,    NORM, 1,1,  "ff",   "00",     "vv",    0 },
    {wav_to_uv_fn,    NORM, 1,1,  "ff",   "00",     "vv",    0 },
+   {showmodel_fn,    NORM, 0,1,  " C",   " 0",     " v",    1 },
+   {check_uvaver_fn, NORM, 3,3,  " fff", " 000",   " vvv",  1 },
+   {model_flux_fn,   NORM, 0,1,  "fl",   "00",     "vv",    1 },
 };
 
 /*
@@ -539,6 +545,9 @@ static char *dmapf_name[] = {
    "rad_to_map",
    "uv_to_wav",
    "wav_to_uv",
+   "showmodel",
+   "check_uvaver",
+   "model_flux"
 };
 
 /*
@@ -3523,6 +3532,7 @@ static Template(maplot_fn)
   int domod=0;      /* Default to not plotting the model components */
   int docln=0;      /* If 1 plot the restored map */
   int dovect=0;     /* True to plot a polarization map */
+  int docur=1;      /* Allow the user to interact with map using cursor */
 
 /* List valid argument values for the map-type argument */
 
@@ -3587,6 +3597,11 @@ static Template(maplot_fn)
  */
   if(npar>1 && *LOGPTR(invals[1]))
     domod=1;
+/*
+ * Allow the user to interact with the plot using the cursor?
+ */
+  if(npar>2)
+    docur = *LOGPTR(invals[2]);
 /*
  * Are polarization vectors are to be plotted?
  */
@@ -3653,7 +3668,7 @@ static Template(maplot_fn)
  */
   if(maplot(vlbob, vlbmap, vlbwins, &mappar.mpb, &mappar.vect,
 	    domap, mappar.ctab, docont, dovect, domod, levs, nlevs,
-	    mappar.cmul, mappar.box, mapmarkers))
+	    mappar.cmul, mappar.box, mapmarkers, docur))
     return -1;
   return no_error;
 }
@@ -4490,7 +4505,7 @@ static Template(modfit_fn)
  * Attempt to fit the variable part of the established and tentative models
  * to the residual visibilities.
  */
-  if(fituvmodel(vlbob, niter, invpar.uvmin, invpar.uvmax))
+  if(fituvmodel(vlbob, niter, invpar.uvmin, invpar.uvmax, 0))
     return -1;
   return no_error;
 }
@@ -5097,16 +5112,26 @@ static Template(uvprj_fn)
  */
 static Template(setcont_fn)
 {
-  int ncmp;  /* The number of components to be transfered */
+  int ncmp;      /* The number of components to be transfered */
+  int doset = 1; /* True to move normal model to continuum */
+                 /* False to move continuum model to normal */
 /*
  * Make sure that an observation has been read.
  */
   if(nodata("setcont", OB_INDEX))
     return -1;
 /*
+ * Move normal to continuum model?
+ */
+  if(npar > 0)
+    doset = *LOGPTR(invals[0]);
+/*
  * Count the number of components that are to be appended.
  */
-  ncmp = vlbob->model->ncmp + vlbob->newmod->ncmp;
+  if(doset)
+    ncmp = vlbob->model->ncmp + vlbob->newmod->ncmp;
+  else
+    ncmp = vlbob->cmodel->ncmp + vlbob->cnewmod->ncmp;
 /*
  * Make sure that there are components to appended, so that the
  * map is not marked as invalid unnecessarily.
@@ -5121,13 +5146,16 @@ static Template(setcont_fn)
 /*
  * Append the tentative and established models to the continuum models.
  */
-    if(setcmod(vlbob, 1))
+    if(setcmod(vlbob, doset))
       return -1;
   };
 /*
  * Inform user.
  */
-  lprintf(stdout, "Added %d components to the continuum model.\n", ncmp);
+  if(doset)
+    lprintf(stdout, "Moved %d components to the continuum model.\n", ncmp);
+  else
+    lprintf(stdout, "Moved %d continuum components to the normal model.\n", ncmp);
   return no_error;
 }
 
@@ -7263,5 +7291,185 @@ static Template(uv_to_wav_fn)
 static Template(wav_to_uv_fn)
 {
   *FLTPTR(outvals) = wavtouv(*FLTPTR(invals[0]));
+  return no_error;
+}
+
+/*.......................................................................
+ * Show the latest and established CLEAN models on the terminal, or saved
+ * to a file.
+ *
+ * Input:
+ *  name   char *  The file name for an optional output file.
+ */
+static Template(showmodel_fn)
+{
+  int waserr=0;   /* Records whether wmodel() succeded */
+/*
+ * Default to write to stdout.
+ */
+  FILE *modfd=stdout;     /* File descriptor for model file */
+  char *modfil="(stdout)";/* Pointer to model-file name */
+/*
+ * Sanity check.
+ */
+  if(nodata("wmodel", OB_INDEX))
+    return -1;
+/*
+ * Mark the map as out of date.
+ */
+  if(vlbmap)
+    vlbmap->domap = MAP_IS_STALE;
+/*
+ * Attempt to fit the variable part of the established and tentative models
+ * to the residual visibilities. Note that we don't check the error return
+ * value, because we still want to display the model if a new fit can't be
+ * performed (for example if there are no variable parameters to be fitted).
+ */
+  (void) fituvmodel(vlbob, 0, invpar.uvmin, invpar.uvmax, 1);
+/*
+ * Get arguments.
+ */
+  switch(npar) {
+  case 1:
+/*
+ * Override stdout default?
+ */
+    if(*STRPTR(invals[0])[0] != '\0') {
+/*
+ * Get the model-file name.
+ */
+      modfil = *STRPTR(invals[0]);
+/*
+ * Open the model file.
+ */
+      modfd = fopen(modfil, "w");
+      if(modfd == NULL) {
+	lprintf(stderr, "wmodel: Unable to open new model file: %s\n", modfil);
+	return -1;
+      }
+    }
+  }
+/*
+ * Report what is being done if writing to an external file.
+ */
+  if(modfd != stdout) {
+    int ncmp = vlbob->model->ncmp + vlbob->newmod->ncmp +
+               vlbob->cmodel->ncmp + vlbob->cnewmod->ncmp;
+    lprintf(stdout, "Writing information on %d model components to file: %s\n", ncmp, modfil);
+  }
+/*
+ * Show the origin of the model.
+ */
+  {
+    double ra = lmtora(vlbob->source.ra, vlbob->source.dec,
+                       -vlbob->geom.east, -vlbob->geom.north, vlbob->proj);
+    double dec = lmtodec(vlbob->source.ra, vlbob->source.dec,
+                         -vlbob->geom.east, -vlbob->geom.north, vlbob->proj);
+    char buf[20]; /* Buffer size must be >= 11 + precision passed to sraddms() */
+    waserr = waserr || lprintf(modfd, "# Source: %s\n", vlbob->source.name) < 0;
+    waserr = waserr || lprintf(modfd, "# RA: %s  Dec: %s  Epoch: %.1f\n",
+                               sradhms(ra, 3, 0, buf), sraddms(dec, 3, 0, buf),
+                               vlbob->source.epoch) < 0;
+  }
+/*
+ * Write the established and tentative models.
+ */
+  if(vlbob->model->ncmp > 0) {
+    waserr = waserr || lprintf(modfd, "# Established model.\n") < 0;
+    waserr = waserr || show_model(vlbob, vlbob->model, modfd);
+  }
+  if(vlbob->newmod->ncmp > 0) {
+    waserr = waserr || lprintf(modfd, "# Tentative model.\n") < 0;
+    waserr = waserr || show_model(vlbob, vlbob->newmod, modfd);
+  }
+  if(vlbob->cmodel->ncmp > 0) {
+    waserr = waserr || lprintf(modfd, "# Established continuum model.\n") < 0;
+    waserr = waserr || show_model(vlbob, vlbob->cmodel, modfd);
+  }
+  if(vlbob->cnewmod->ncmp > 0) {
+    waserr = waserr || lprintf(modfd, "# Tentative continuum model.\n") < 0;
+    waserr = waserr || show_model(vlbob, vlbob->cnewmod, modfd);
+  }
+  if((modfd != stdout && fclose(modfd)==EOF) || waserr) {
+    lprintf(stderr, "wmodel: Error writing file: %s\n", modfil);
+    return -1;
+  }
+  return no_error;
+}
+
+/*.......................................................................
+ * Report approximately by how much a source at a given distance from
+ * the pointing center will be weakened if the visibilites are
+ * averaged over a specified duration.
+ *
+ * Input:
+ *  av_time  float  The averaging time (seconds).
+ *  east     float  The eastward offset of the source, relative to
+ *                  the pointing center (map units).
+ *  north    float  The northward offset of the source, relative to
+ *                  the pointing center (map units).
+
+ */
+static Template(check_uvaver_fn)
+{
+  float av_time;      /* The required averaging time (seconds) */
+  float east, north;  /* The position of the source (radians) */
+/*
+ * Check that we have a UV data-set to be averaged.
+ */
+  if(nodata("check_uvaver", OB_INDEX))
+    return -1;
+/*
+ * Get the arguments.
+ */
+  av_time = *FLTPTR(invals[0]);
+  east = xytorad(*FLTPTR(invals[1]));
+  north = xytorad(*FLTPTR(invals[2]));
+/*
+ * Check the arguments.
+ */
+  if(av_time <= 0.0f) {
+    lprintf(stderr, "check_uvaver: Illegal averaging time (%g)\n", av_time);
+    return -1;
+  };
+/*
+ * Find the U,V extents.
+ */
+  if(uvaver_time_smearing(vlbob, av_time, east, north))
+    return -1;
+  return no_error;
+}
+
+/*.......................................................................
+ * Return the total flux in the normal or continuum model.
+ *
+ * Input:
+ *  docont bool    If true, write the continuum model only. If false or
+ *                 omitted write the normal models only.
+ */
+static Template(model_flux_fn)
+{
+  int docont=0;   /* True to report of the flux of the continuum model */
+  Model *model;   /* Established model whose flux is to be reported */
+  Model *newmod;  /* Tentative model whose flux is to be reported */
+/*
+ * Sanity check.
+ */
+  if(nodata("model_flux", OB_INDEX))
+    return -1;
+/*
+ * Get arguments.
+ */
+  if(npar > 0)
+    docont = *LOGPTR(invals[0]);
+/*
+ * Get pointers to the established and tentative models to be summed.
+ */
+  model = docont ? vlbob->cmodel : vlbob->model;
+  newmod = docont ? vlbob->cnewmod : vlbob->newmod;
+/*
+ * Record the total flux for return to the caller.
+ */
+  *FLTPTR(outvals) = newmod->flux + model->flux;
   return no_error;
 }

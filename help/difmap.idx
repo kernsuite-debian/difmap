@@ -28,11 +28,13 @@ Functions and commands:
  addwin
    Append a new entry to the list of clean windows.
  antenna_beam
-   (No help file)
+   Specify a beam for one or more antennas (for primary beam calculations).
  basename
    Returns the name of baseline 'ibase' of sub-array 'isub'.
  beamloc
    Change when and where mapplot plots the clean beam ellipse.
+ check_uvaver
+   Check if a given averaging time would cause time smearing.
  clean
    Clean a residual dirty map with the dirty beam.
  clear_markers
@@ -71,6 +73,8 @@ Functions and commands:
    Establish the latest CLEAN model and compute its UV representation.
  loglevs
    Set logarithmic contour levels for mapplot.
+ map_to_rad
+   Convert an image plane distance from map units to radians.
  mapcolor
    Select the colormap type, brightness and contrast to use in mapplot.
  mapfunc
@@ -91,6 +95,8 @@ Functions and commands:
    Add an optionally annotated map marker to be drawn at a given X,Y offset.
  mjd
    Return the Modified Julian Date corresponding to a given calendar date.
+ model_flux
+   Return the flux in either the normal model or the continuum model.
  modelfit
    Fit image-plane model components to visibilities in the UV plane.
  multi_model
@@ -116,13 +122,15 @@ Functions and commands:
  planet_temp
    Find the brightness temperature implied by the measured flux of a planet.
  pointing_center
-   (No help file)
+   Specify the original pointing center of the observation.
  polvec
    Configure how polarization vectors are displayed.
  primary_beam
    Specify a primary beam to use on all baselines.
  projplot
    Plot visibility amplitudes and/or phases versus projected UV distance.
+ rad_to_map
+   Convert an image plane distance from radians to map units.
  radplot
    Plot visibility amplitudes and/or phases versus UV radius.
  read_models
@@ -152,13 +160,15 @@ Functions and commands:
  selftaper
    Sets a (1 - gaussian) taper to weight down SHORT baselines.
  setcont
-   Add the current model to the continuum model.
+   Add the current model to the continuum model, or vice versa.
  shift
    Shift the observation phase-center, CLEAN window and model positions.
  shiftto
    Move the phase-center, CLEAN window and model positions to a given RA,Dec.
  showhist
    Display the history that was recorded with the current observation.
+ showmodel
+   Report detailed information about the current models.
  showpar
    Display a list of difmap configuration parameters.
  specbase
@@ -189,6 +199,8 @@ Functions and commands:
    Unflag a set of baselines over a selectable time range.
  unshift
    Undo accumulated position shifts from the data, windows and models.
+ uv_to_wav
+   Convert a UV plane distance from UV units to wavelengths.
  uvaver
    Time average a UV data set.
  uvplot
@@ -207,6 +219,8 @@ Functions and commands:
    Compute the statistics of a given observable.
  vplot
    General visibility plotting and editing command.
+ wav_to_uv
+   Convert a UV plane distance from wavelengths to UV units.
  wbeam
    Save the dirty beam to a FITS file.
  wdmap

@@ -39,8 +39,9 @@ static Modfit *new_Modfit(Observation *ob, Model *mod,
 			  float uvmin, float uvmax);
 static Modfit *del_Modfit(Modfit *mf);
 static int mod_nfree(Model *mod);
-static int endfit(Observation *ob, Modfit *mf, int retcode);
+static int endfit(Observation *ob, Modfit *mf, int quiet, int retcode);
 static int getmodvis(Modfit *mf, Visibility *vis);
+static int update_model_errors(Modfit *mf);
 
 static GETFREE(getfree);
 static SETFREE(setfree);
@@ -58,11 +59,13 @@ static GETNEXT(getnext);
  *                      request just the pre-pass iteration.
  *  uvmin      float    The minimum UV radius to take visibilities from.
  *  uvmax      float    The maximum UV radius to take visibilities from.
+ *  quiet        int    0 - Display the results of the fit to standard output.
+ *                      1 - Don't display the results of the fit.
  * Output:
  *  return       int    0 - OK.
  *                      1 - Error.
  */
-int fituvmodel(Observation *ob, int niter, float uvmin, float uvmax)
+int fituvmodel(Observation *ob, int niter, float uvmin, float uvmax, int quiet)
 {
   Modfit *mf;     /* Model-fit descriptor */
   Lmfit *lm;      /* Levensburgh-Marquardt fit descriptor */
@@ -89,7 +92,7 @@ int fituvmodel(Observation *ob, int niter, float uvmin, float uvmax)
  */
   mf = new_Modfit(ob, ob->newmod, uvmin, uvmax);
   if(mf==NULL)
-    return endfit(ob, mf, 1);
+    return endfit(ob, mf, quiet, 1);
 /*
  * Get the Levensberg-Marquardt fit descriptor.
  */
@@ -103,19 +106,19 @@ int fituvmodel(Observation *ob, int niter, float uvmin, float uvmax)
  */
     switch(lm_fit(lm)) {
     case LM_ABORT:
-      return endfit(ob, mf, 1);
+      return endfit(ob, mf, quiet, 1);
       break;
     case LM_BETTER:
 /*
  * If the previous lines were a block of failed iterations, add a blank line
  * to end the block.
  */
-      if(!was_best)
+      if(!was_best && !quiet)
 	lprintf(stdout, "\n");
 /*
  * Describe the scope of the fitting problem on the first iteration.
  */
-      if(iter==0) {
+      if(iter==0 && !quiet) {
 	long nvis = (lm->best.ndfree + lm->nfree) / 2L;
 	lprintf(stdout,"There are %d variables and %ld usable visibilities.\n",
 		lm->nfree, nvis);
@@ -127,14 +130,17 @@ int fituvmodel(Observation *ob, int niter, float uvmin, float uvmax)
 /*
  * Report the improved fit.
  */
-      lprintf(stdout,
-      "Iteration %2.2d: Reduced Chi-squared=%#.8g  Degrees of Freedom=%ld\n",
-	      iter, lm->best.rchisq, lm->best.ndfree);
-      wmodel(ob->newmod, 0.0f, 0.0f, 0, 0.0f, stdout);
+      if(!quiet) {
+        lprintf(stdout,
+                "Iteration %2.2d: Reduced Chi-squared=%#.8g  Degrees of Freedom=%ld\n",
+                iter, lm->best.rchisq, lm->best.ndfree);
+        wmodel(ob->newmod, 0.0f, 0.0f, 0, 0.0f, stdout);
+
 /*
  * Separate the fit details from those of the next iteration.
  */
-      lprintf(stdout, "\n");
+        lprintf(stdout, "\n");
+      }
 /*
  * Record the fact that a new best fit was attained.
  */
@@ -144,8 +150,10 @@ int fituvmodel(Observation *ob, int niter, float uvmin, float uvmax)
 /*
  * The latest iteration did not preduce a better fit.
  */
-      lprintf(stdout,"Iteration %2.2d: Reduced Chi-squared=%#.8g (Increased)\n",
-	      iter, lm->new.rchisq);
+      if(!quiet) {
+        lprintf(stdout,"Iteration %2.2d: Reduced Chi-squared=%#.8g (Increased)\n",
+                iter, lm->new.rchisq);
+      }
 /*
  * Record the fact that the new iteration did not generate a new best fit.
  */
@@ -157,15 +165,28 @@ int fituvmodel(Observation *ob, int niter, float uvmin, float uvmax)
  * Reinstate the original current IF state.
  */
   if(set_cif_state(ob, old_if))
-    return endfit(ob, mf, 1);
-  return endfit(ob, mf, 0);
+    return endfit(ob, mf, quiet, 1);
+  return endfit(ob, mf, quiet, 0);
 }
 
 /*.......................................................................
  * Private return function of fituvmodel() to perform cleanup.
  */
-static int endfit(Observation *ob, Modfit *mf, int retcode)
+static int endfit(Observation *ob, Modfit *mf, int quiet, int retcode)
 {
+/*
+ * Record the estimated errors on the fitted parameters.
+ */
+  if(mf && update_model_errors(mf))
+    retcode = 1;
+/*
+ * Show the fitted model.
+ */
+  if(!quiet && mf && show_model(ob, ob->newmod, stdout))
+    retcode = 1;
+/*
+ * Return any resources used during the fit.
+ */
   del_Modfit(mf);
   return retcode;
 }
@@ -884,4 +905,314 @@ static int getmodvis(Modfit *mf, Visibility *vis)
   return 0;
 }
 
+/*.......................................................................
+ * Update the estimated errors of the free parameters of the fit.
+ *
+ * Input:
+ *  mf     Modfit *   The model fitting resource object.
+ * Output:
+ *  return    int     0 - OK.
+ *                    1 - Error.
+ */
+static int update_model_errors(Modfit *mf)
+{
+  Modcmp *cmp;     /* The model component being processed */
+  double **covar;  /* The covariance matrix of the fit */
+  double *pars;    /* The array of best fit parameter values */
+  int npar = 0;    /* The number of parameters processed so far */
+  double var;      /* The estimated variance of a paremeter */
+  const double tiny = 1e-50;
+/*
+ * Check the arguments.
+ */
+  if(!mf) {
+    lprintf(stderr, "update_model_errors: Missing Modfit object.\n");
+    return 1;
+  }
+/*
+ * Get the covariance matrix of the fit.
+ */
+  covar = lm_covar(mf->lm);
+  if(!covar)
+    return 1;
+/*
+ * Get the best-fit values.
+ */
+  pars = mf->lm->best.pars;
+/*
+ * Find the free parameters in mf->mod and assign their errors sequentially
+ * from the diagonal of the covariance matrix.
+ */
+  for(cmp=mf->mod->head; cmp; cmp = cmp->next) {
+    int freepar = cmp->freepar;
+/*
+ * Start with all the uncertainties reset to zero.
+ */
+    cmp->flux_err = 0.0;
+    cmp->x_err = 0.0;
+    cmp->y_err = 0.0;
+    cmp->major_err = 0.0;
+    cmp->ratio_err = 0.0;
+    cmp->phi_err = 0.0;
+    cmp->spcind_err = 0.0;
+/*
+ * If any parameters of this component were free to vary, update their
+ * statistical uncertainties.
+ */
+    if(freepar) {
+/*
+ * Compute the uncertainty in the flux, if variable.
+ */
+      if(freepar & M_FLUX) {
+        var = covar[npar][npar]; /* Get flux variance from covariance diagonal */
+        if(var > 0.0) cmp->flux_err = sqrt(var);
+        npar++;
+      }
+/*
+ * Compute the uncertainties of component's centroid, if variable.
+ */
+      if(freepar & M_CENT) {
+/*
+ * The x-axis position.
+ */
+        var = covar[npar][npar];  /* Get x variance from covariance diagonal */
+        if(var > 0.0) cmp->x_err = sqrt(var) / mf->uvrmax;
+        npar++;
+/*
+ * The y-axis position.
+ */
+        var = covar[npar][npar];  /* Get y variance from covariance diagonal */
+        if(var > 0.0) cmp->y_err = sqrt(var) / mf->uvrmax;
+        npar++;
+      };
+/*
+ * Compute errors for the elliptical parameters if variable.
+ */
+      if(freepar & (M_MAJOR | M_RATIO | M_PHI)) {
+/*
+ * Get the magnitude renormalization constant.
+ */
+	double renorm = mf->uvrmax * mf->uvrmax;
+        double renorm_sq = renorm * renorm;
+/*
+ * Start with all of the uncertainties marked as zero. We will
+ * override the ones that have known uncertainties below.
+ */
+        double major_var = 0.0;
+        double ratio_var = 0.0;
+        double phi_var = 0.0;
+/*
+ * Are all the elliptical parameters variable?
+ */
+	if(freepar & M_RATIO) {
+/*
+ * The intermediate x parameter of the ellipse.
+ */
+	  double x = pars[npar] / renorm;
+          double xx = x*x;
+          double x_var = covar[npar][npar] / renorm_sq;
+          npar++;
+/*
+ * The intermediate y parameter of the ellipse.
+ */
+	  double y = pars[npar] / renorm;
+          double yy = y*y;
+          double y_var = covar[npar][npar] / renorm_sq;
+          npar++;
+/*
+ * The intermediate z parameter of the ellipse.
+ */
+	  double z = pars[npar] / renorm;
+          double z_var = covar[npar][npar] / renorm_sq;
+          npar++;
+/*
+ * Get the radius of the vector (x,y).
+ */
+          double rr = xx + yy;
+	  double r = sqrt(rr);
+/*
+ * Temporary variables for holding the fitted major axis dimension.
+ */
+          double major;
+/*
+ * Compute the variance of r.
+ */
+          if(rr > tiny) {
+/*
+ * Determine the uncertainty in r.
+ */
+            double r_var = (xx * x_var + yy * y_var) / rr;
+/*
+ * The minor axis extent is given by sqrt(Z - sqrt(X*X+Y*Y)). Thus if
+ * Z < sqrt(X*X+Y*Y) both the minor axis and the axial ratio are
+ * imaginary.  This is clearly not physical. In such cases we will
+ * modify Z such that Z==sqrt(X*X+Y*Y), which sets the axial ratio
+ * (and thus the minor extent) to zero, increases the major axis
+ * length, but leaves the position angle unchanged.
+ */
+            if(z < r) {
+              z = r;
+              z_var = r_var;
+            }
+/*
+ * Compute the errors on the elliptical dimensions.
+ */
+            major = sqrt(fabs(z + r));
+            if(major > tiny) {
+              double minor = sqrt(fabs(z - r));
+              double major_sqr = major * major;
+              major_var = 0.25 / major_sqr * (z_var + r_var);
+              if(minor > tiny) {
+                double minor_sqr = minor * minor;
+                double minor_var = 0.25 / minor_sqr * (z_var + r_var);
+                ratio_var = minor_var / major_sqr
+                  + major_var * minor_sqr / major_sqr / major_sqr;
+              }
+            }
+/*
+ * Compute the error on the elliptical angle: phi = 0.5 * atan2(y,x)
+ */
+            if(fabs(x) > tiny) {
+              double q = y / x;
+              double qq = q*q;
+              double tmp = (x * (1.0 + qq));
+              phi_var = 0.25 * (y_var + qq * x_var) / tmp / tmp;
+            }
+          }
+/*
+ * Handle the circular case where only Z is varied.
+ */
+	} else {
+	  double z = pars[npar] / renorm;
+          double z_var = covar[npar][npar] / renorm_sq;
+          double major = sqrt(fabs(z));
+          npar++;
+          if(major > tiny) {
+            major_var = 0.25 / major / major * z_var;
+          }
+	};
+/*
+ * Record the standard deviations.
+ */
+        if(major_var > 0.0) cmp->major_err = sqrt(major_var);
+        if(ratio_var > 0.0) cmp->ratio_err = sqrt(ratio_var);
+        if(phi_var > 0.0) cmp->phi_err = sqrt(phi_var);
+      };
+/*
+ * Spectral index.
+ */
+      if(freepar & M_SPCIND) {
+        double var = covar[npar][npar];
+        npar++;
+        if(var > 0.0) cmp->spcind_err = sqrt(var);
+      }
+    };
+  };
+  return 0;
+}
+
+/*.......................................................................
+ * Write the details of a fitted model to a file or the terminal.
+ *
+ * Input:
+ *  ob   Observation *  The descriptor of the observation.
+ *  mod        Model *  The model containing free parameters to be fitted.
+ *  fd          FILE *  The file descriptor of an open file. I am assuming
+ *                      that all users of this function will want to start
+ *                      the file with a descriptive header before calling
+ *                      this routine - hence the requirement for an open
+ *                      file rather than the name of a file to be opened.
+ * Output:
+ *   return   int   0 - No write errors.
+ */
+int show_model(Observation *ob, Model *mod, FILE *fd)
+{
+  Modcmp *cmp;   /* The component being described */
+/*
+ * Check the arguments.
+ */
+  if(!ob || !mod) {
+    lprintf(stderr, "show_model: Missing argument(s).\n");
+    return 1;
+  }
+/*
+ * If no output file was specified, substitude stdout.
+ */
+  if(!fd)
+    fd = stdout;
+/*
+ * Label the file columns.
+ */
+  lprintf(fd, "#    Flux (Jy)          East (arcsec)        North (arcsec)    Shape   R.A. (deg)       Dec (deg)  Major FWHM (arcsec) Minor FWHM (arcsec)  Theta (deg)     Freq (Hz)      Spectral Index  \n");
+  lprintf(fd, "#  Value     Stdev      Value     Stdev      Value     Stdev                                          Value    Stdev     Value    Stdev     Value  Stdev                   Value     Stdev \n");
+  lprintf(fd, "#------------------  -------------------  ------------------- ------  -------------- -------------- -----------------  -----------------  ---------------  -----------  -------------------\n");
+
+/*
+ * No components to be written?
+ */
+  if(mod==NULL || mod->ncmp==0)
+    return 0;
+/*
+ * Write the components according to their types.
+ */
+  for(cmp=mod->head; cmp != NULL;cmp=cmp->next) {
+/*
+ * Compute the RA, Dec of the component’s centroid.
+ */
+    double ra = lmtora(ob->source.ra, ob->source.dec,
+                       -ob->geom.east + cmp->x,
+                       -ob->geom.north + cmp->y, ob->proj);
+    double dec = lmtodec(ob->source.ra, ob->source.dec,
+                         -ob->geom.east + cmp->x,
+                         -ob->geom.north + cmp->y, ob->proj);
+/*
+ * All component have a flux and an x,y position.
+ */
+    lprintf(fd,"% 11.4e %7.1e", cmp->flux, cmp->flux_err);
+    lprintf(fd,"  % 11.4e %7.1e", cmp->x * rtoas, cmp->x_err * rtoas);
+    lprintf(fd,"  % 11.4e %7.1e", cmp->y * rtoas, cmp->y_err * rtoas);
+/*
+ * Show the component type.
+ */
+    lprintf(fd," %6s", modtyp_name(cmp->type));
+/*
+ * Show the Right Ascension and Declination of the above centroid, giving
+ * both fields a precision of one micro-arcsecond.
+ */
+    lprintf(fd,"  %14.10f % 14.10f", ra * rtod, dec * rtod);
+/*
+ * All component types except delta functions have an elliptical
+ * shape.
+ */
+    if(cmp->type != M_DELT || cmp->freq0 > 0.0) {
+      double minor = cmp->major * cmp->ratio;
+      double minor_err = cmp->major * cmp->ratio_err;
+      lprintf(fd," %9.3e %7.1e", cmp->major * rtoas,
+              cmp->major_err * rtoas);
+      lprintf(fd,"  %9.3e %7.1e", minor * rtoas,
+              minor_err * rtoas);
+      lprintf(fd,"  %# 7.2f %7.1e", cmp->phi * rtod,
+              cmp->phi_err * rtod);
+      if(cmp->freq0 > 0.0) {
+        lprintf(fd, "  %#11.6g", cmp->freq0);
+        lprintf(fd, "  % 10.3e  %7.1e", cmp->spcind, cmp->spcind_err);
+      };
+    };
+/*
+ * New line.
+ */
+    lputc('\n', fd);
+/*
+ * Check for write errors.
+ */
+    if(ferror(fd)) {
+      lprintf(stderr, "Error writing model file\n");
+      return -1;
+    };
+  };
+/*
+ * Finished successfully.
+ */
+  return 0;
+}
 

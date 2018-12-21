@@ -203,6 +203,11 @@ in the new one.
 
 The 'wmodel' command, used to save models in external disk files.
 
+The 'showmodel' command can be used to display detailed information
+about each model component in a more human usable form than the wmodel
+command. It can also be given a filename to write this information to
+disk.
+
 The 'modelfit' command, used to fit the free parameters of a model to
 the observed visibilities.
 
@@ -217,3 +222,8 @@ create new model components using the cursor.
 
 The 'setcont' command, used to specify that the current combined model
 should be moved into the continuum model.
+
+MODEL FILE FORMATS
+------------------
+For documentation of the format of the model files that are read by
+rmodel and written by wmodel, please see 'help modelfit'.

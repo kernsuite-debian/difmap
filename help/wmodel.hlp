@@ -31,6 +31,7 @@ presenting the optional second argument with the value TRUE.
 
 RELATED COMMANDS
 ----------------
-rmodel - Read a new CLEAN model from a file.
-save   - Save all data files and the difmap running parameters.
+rmodel    - Read a new model from a file.
+showmodel - Report detailed information about the current models.
+save      - Save all data files and the difmap running parameters.
 

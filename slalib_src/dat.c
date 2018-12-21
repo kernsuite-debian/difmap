@@ -52,29 +52,33 @@ double slaDat ( double utc )
 ** One second is added for each entry in the table.
 */
    static double leap_utc[]={
-    41499.0, /* 1972 July 1    TAI-UTC = 11.0 */
-    41683.0, /* 1973 January 1 TAI-UTC = 12.0 */
-    42048.0, /* 1974 January 1 TAI-UTC = 13.0 */
-    42413.0, /* 1975 January 1 TAI-UTC = 14.0 */
-    42778.0, /* 1976 January 1 TAI-UTC = 15.0 */
-    43144.0, /* 1977 January 1 TAI-UTC = 16.0 */
-    43509.0, /* 1978 January 1 TAI-UTC = 17.0 */
-    43874.0, /* 1979 January 1 TAI-UTC = 18.0 */
-    44239.0, /* 1980 January 1 TAI-UTC = 19.0 */
-    44786.0, /* 1981 July 1    TAI-UTC = 20.0 */
-    45151.0, /* 1982 July 1    TAI-UTC = 21.0 */
-    45516.0, /* 1983 July 1    TAI-UTC = 22.0 */
-    46247.0, /* 1985 July 1    TAI-UTC = 23.0 */
-    47161.0, /* 1988 January 1 TAI-UTC = 24.0 */
-    47892.0, /* 1990 January 1 TAI-UTC = 25.0 */
-    48257.0, /* 1991 January 1 TAI-UTC = 26.0 */
-    48804.0, /* 1992 July 1    TAI-UTC = 27.0 */
-    49169.0, /* 1993 July 1    TAI-UTC = 28.0 */
-    49534.0, /* 1994 July 1    TAI-UTC = 29.0 */
-    50083.0, /* 1996 January 1 TAI-UTC = 30.0 */
-    50630.0, /* 1997 July 1    TAI-UTC = 31.0 */
-    51179.0, /* 1999 Jan 1     TAI-UTC = 32.0 */
-    53736.0, /* 2006 Jan 1     TAI-UTC = 33.0 */
+    41499.0, /* 1972 Jul 1  TAI-UTC = 11.0 */
+    41683.0, /* 1973 Jan 1  TAI-UTC = 12.0 */
+    42048.0, /* 1974 Jan 1  TAI-UTC = 13.0 */
+    42413.0, /* 1975 Jan 1  TAI-UTC = 14.0 */
+    42778.0, /* 1976 Jan 1  TAI-UTC = 15.0 */
+    43144.0, /* 1977 Jan 1  TAI-UTC = 16.0 */
+    43509.0, /* 1978 Jan 1  TAI-UTC = 17.0 */
+    43874.0, /* 1979 Jan 1  TAI-UTC = 18.0 */
+    44239.0, /* 1980 Jan 1  TAI-UTC = 19.0 */
+    44786.0, /* 1981 Jul 1  TAI-UTC = 20.0 */
+    45151.0, /* 1982 Jul 1  TAI-UTC = 21.0 */
+    45516.0, /* 1983 Jul 1  TAI-UTC = 22.0 */
+    46247.0, /* 1985 Jul 1  TAI-UTC = 23.0 */
+    47161.0, /* 1988 Jan 1  TAI-UTC = 24.0 */
+    47892.0, /* 1990 Jan 1  TAI-UTC = 25.0 */
+    48257.0, /* 1991 Jan 1  TAI-UTC = 26.0 */
+    48804.0, /* 1992 Jul 1  TAI-UTC = 27.0 */
+    49169.0, /* 1993 Jul 1  TAI-UTC = 28.0 */
+    49534.0, /* 1994 Jul 1  TAI-UTC = 29.0 */
+    50083.0, /* 1996 Jan 1  TAI-UTC = 30.0 */
+    50630.0, /* 1997 Jul 1  TAI-UTC = 31.0 */
+    51179.0, /* 1999 Jan 1  TAI-UTC = 32.0 */
+    53736.0, /* 2006 Jan 1  TAI-UTC = 33.0 */
+    54832.0, /* 2009 Jan 1  TAI-UTC = 34.0 */
+    56109.0, /* 2012 Jul 1  TAI-UTC = 35.0 */
+    57204.0, /* 2015 Jul 1  TAI-UTC = 36.0 */
+    57754.0, /* 2017 Jan 1  TAI-UTC = 37.0 */
    };
 
 /* Record the number of entries in the table */

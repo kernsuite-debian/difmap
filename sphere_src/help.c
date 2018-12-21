@@ -18,7 +18,7 @@
 /* Declare a container type for help file info */
 
 typedef struct {
-  enum {HLP_LEN=160} len;
+  enum {HLP_LEN=200} len;
   char args[HLP_LEN+1];    /* Arguments string from first line of help file */
   char intro[HLP_LEN+1];   /* One line intro from second line of help file */
   char *help_name;         /* Full name of help file */
@@ -38,7 +38,7 @@ typedef enum {IDX_NONE, IDX_GENERAL, IDX_COMMAND} Topictype;
 /* Declare an index file descriptor */
 
 typedef struct {
-  enum {IDX_LEN=80} len;
+  enum {IDX_LEN=200} len;
   char *general_title;     /* Title used to introduce general help topics */
   char *command_title;     /* Title used to introduce command help topics */
   char *nohelp;            /* Intro string used when there is no help file */

@@ -1,0 +1,130 @@
+file_name
+Report detailed information about the current models.
+EXAMPLE
+-------
+
+The following example shows many features of a two component model
+that was fitted to visibility data using the modelfit command. There
+are a lot of parameters per model component, so this may look messy on
+a narrow terminal window.
+
+ 0>showmod
+ Partitioning the model into established and variable parts.
+ Extracting 2 model components from the UV plane model.
+ The fixed established model contains 0 components (0 Jy).
+ The variable part of the model contains 2 components (5.84897 Jy).
+ # Source: 2230+114
+ # RA: 22 30 07.812  Dec: 22 30 07.812  Epoch: 1950.0
+ # Tentative model.
+ #    Flux (Jy)          East (arcsec)        North (arcsec)    Shape   R.A. (deg)       Dec (deg)  Major FWHM (arcsec) Minor FWHM (arcsec)  Theta (deg)     Freq (Hz)      Spectral Index
+ #  Value     Stdev      Value     Stdev      Value     Stdev                                          Value    Stdev     Value    Stdev     Value  Stdev                   Value     Stdev
+ #------------------  -------------------  ------------------- ------  -------------- -------------- -----------------  -----------------  ---------------  -----------  -------------------
+  4.4795e+00 8.8e-03  -1.5506e-04 3.2e-06   4.4635e-04 1.3e-05  gauss  337.5325512451  11.4729775238 6.295e-03 5.4e-05  1.342e-03 2.5e-04   -25.03 6.5e-01  1.66299e+09   0.000e+00  0.0e+00
+  1.3694e+00 9.8e-03   6.9116e-03 3.0e-05  -7.4671e-03 4.2e-05  gauss  337.5325532480  11.4729753256 7.184e-03 2.3e-04  1.878e-03 8.7e-04    88.53 1.7e+00  1.66299e+09   0.000e+00  0.0e+00
+ 0>
+
+PARAMETERS
+----------
+file_name    - (Default=standard output)
+               The name of a file to write the model to. If this
+               argument is omitted or specified as an empty string "",
+               then the model will be displayed on the standard output
+               and also in the log file.
+
+CONTEXT
+-------
+
+Whereas the wmodel command displays or records the current model in
+VLBI model format, this command shows them in a format designed to be
+human readable, given a wide enough terminal to see the long lines
+without line wrapping.
+
+The showmodel command shows the following columns for each model
+component:
+
+Flux (Jy)
+   This is the total flux density of the model component (ie. not its
+   peak flux).
+Flux stdev (Jy)
+   The standard deviation of the above flux if it was fitted by modelfit.
+East (arcsec)
+   The eastward offset of the center of the component relative to the
+   center of the image.
+East stdev (arcsec)
+   The standard deviation of the above offset if it was fitted by modelfit.
+   Zero if the eastern offset was not fitted.
+North (arcsec)
+   The northward offset of the center of the component relative to the
+   center of the image.
+North stdev (arcsec)
+   The standard deviation of the above offset if it was fitted by modelfit.
+   Zero if the northern offset was not fitted.
+Shape (component type):
+   point  - A delta function.
+   gauss  - A two dimensional gaussian.
+   disk   - Uniform disk.
+   sphere - Optically thin sphere.
+   ring   - A ring.
+   rect   - A rectangle
+   sz     - Sunyaev Zeldovich
+RA (degrees)
+   The Right Ascension of the component centroid (J2000)
+Dec (degrees)
+   The Declination Ascension of the component centroid (J2000)
+Major (arcsec)
+   For two dimensional components, this is the full-width at
+   half maximum of the component along the major axis of the
+   elliptically stretched component.
+Major stdev (arcsec)
+   The standard deviation of the above major axis FWHM, if it was fitted
+   by modelfit. Zero if the major axis FWHM was not fitted.
+Minor (arcsec)
+   For two dimensional components, this is the full-width at
+   half maximum of the component along the minor axis of the
+   elliptically stretched component.
+Minor stdev (arcsec)
+   The standard deviation of the above minor axis FWHM, if it was fitted
+   by modelfit. Zero if the minor axis FWHM was not fitted.
+Theta (degrees)
+   The rotation angle of the major axis of the elliptically stretched
+   component, eastward of north (ie. counterclockwise in maps where
+   east is towards the left).
+Theta stdev (degrees)
+   The standard deviation of the above theta parameter, if it was fitted
+   by modelfit. Zero if theta was not fitted.
+Freq (Hz)
+   The reference frequency of the following spectral index.
+Spectral Index
+   The spectral index of the component, where
+
+     Flux = freq ** spectral_index
+
+Beware that the reported standard deviations of fitted parameters will
+only be good estimates if the weights of the visibilities are
+statistical weights. In other words, the weight assigned to each
+visibility should be 1/var, where var is the expected variance of the
+real and imaginary parts of that visibility. A good indication of
+whether correct weights were recorded with the visibilities, is to
+look at the reduced chi-squared that modelfit reports. If the residual
+image after fitting only shows noise, then the chi-squared value
+should be around 1. If it is significantly greater than 1, then either
+the model didn't fit very well, or the weights are larger than they
+should be (ie. the estimates variances are too small). Alternatively,
+if chi-squared is significantly less than 1, then the weights must be
+too low (ie. the estimated variances are too large).
+
+One way to correct the visibility weights, is to use the uvaver
+command to compute new weights based on the scatter of the
+visibilities (see the doscatter argument of uvaver). For this to work,
+however, the averaging time specified to uvaver must cover a few
+integrations of the original observation. Care must be taken not to
+choose an long averaging time that will cause time-smearing. To avoid
+doing this, you can use the check_uvaver to see whether the chosen
+averaging time will adversely affect features in the map.
+
+RELATED COMMANDS
+----------------
+wmodel - Write model components to a VLBI model file.
+rmodel - Read a new CLEAN model from a file.
+save   - Save all data files and the difmap running parameters.
+

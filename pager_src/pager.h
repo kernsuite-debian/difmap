@@ -14,7 +14,7 @@ typedef enum {
 /* Define the pager descriptor - the members are private and should only */
 /* be accessed by the following pager method functions. */
 
-enum{PAGE_WIDTH=132};
+enum{PAGE_WIDTH=200};
 
 typedef struct {
   char buffer[PAGE_WIDTH+1]; /* I/O buffer */

@@ -831,8 +831,9 @@ static int v_plaxes(Vedpar *vp, Vissub *vs, int dotop, int dobot, int erase)
  * inside the top right hand corner.
  */
   cpgsvp(vp->vxa, vp->vxb, vs->vya, vs->vyb);
-  sprintf(label, "%.10s-%.10s", sub->tel[sub->base[vs->base].tel_a].name,
-	  sub->tel[sub->base[vs->base].tel_b].name);
+  snprintf(label, sizeof(label), "%.10s-%.10s",
+           sub->tel[sub->base[vs->base].tel_a].name,
+           sub->tel[sub->base[vs->base].tel_b].name);
   cpgsch(0.5f);
   cpgmtxt("T", -1.5f, 0.99f, 1.0f, label);
 /*
@@ -856,7 +857,6 @@ static int v_plaxes(Vedpar *vp, Vissub *vs, int dotop, int dobot, int erase)
  */
 int v_pldata(Vedpar *vp, Vissub *vs, int ta, int tb, int erase)
 {
-  Subarray *sub;      /* Local pointer to the sub-array being displayed */
   int oldcol;         /* Color index on entry to function */
   float amp,phs;      /* Amp and phase in normalised viewport coordinates */
   float phserr;       /* The phase error in normalised viewport coords */
@@ -881,11 +881,9 @@ int v_pldata(Vedpar *vp, Vissub *vs, int ta, int tb, int erase)
     cpgsci(0);
   cpgsch(1.0f);
 /*
- * Get a local copies of the baseline index and the pointer to the sub-array
- * descriptor.
+ * Get a local copy of the baseline index.
  */
   base = vs->base;
-  sub = vp->sub;
 /*
  * Draw each point with the appropriate symbol and color for its
  * flag status.
@@ -1397,10 +1395,10 @@ int v_label(Vedpar *vp)
  */
   cpgsci(1);
   cpgsch(1.0f);
-  sprintf(awrk, "%s  %s", ob->source.name,
+  snprintf(awrk, sizeof(awrk), "%s  %s", ob->source.name,
 	  sutdate(ob->date.year, ob->date.ut, bwrk));
   cpgmtxt("T", 1.7f, 0.0f, 0.0f, awrk);
-  sprintf(awrk,"%s of %d:%s in IF %d, Pol %s",
+  snprintf(awrk, sizeof(awrk), "%s of %d:%s in IF %d, Pol %s",
 	  vp->doall ? "Baselines":"Upper baselines",
           vp->bs_beg.isub+1, sub->tel[vp->bs_beg.ta].name, ob->stream.cif+1,
 	  Stokes_name(ob->stream.pol.type));
@@ -1416,7 +1414,7 @@ int v_label(Vedpar *vp)
 /*
  * Write Y labels.
  */
-  sprintf(awrk, "%s%s%s%s", vp->dophs?"Phase":"",
+  snprintf(awrk, sizeof(awrk), "%s%s%s%s", vp->dophs?"Phase":"",
 	  vp->dophs&&vp->doamp?" and ":"",
 	  vp->doamp?"Amplitude":"",
 	  vp->dodiff ? " residuals":"");
@@ -1443,13 +1441,8 @@ int v_label(Vedpar *vp)
  */
 static int v_mlab(Vedpar *vp, int erase)
 {
-  Observation *ob;  /* The descriptor of the observation being plotted */
   int oldcol;       /* Temporary storage for entry color index */
   char label[81];   /* Temporary work string to compose mode label in */
-/*
- * Get the descriptor of the observation.
- */
-  ob = vp->ob;
 /*
  * Store the existing plot color.
  */
@@ -1468,7 +1461,7 @@ static int v_mlab(Vedpar *vp, int erase)
 /*
  * Compose the mode label.
  */
-  sprintf(label, "%s editing of %s channels of %s.",
+  snprintf(label, sizeof(label), "%s editing of %s channels of %s.",
 	  vp->stat_ed ? "Station" : "Baseline",
 	  vp->ch_ed ? "selected":"all",
 	  vp->if_ed ? "the displayed IF" : "all IFs");

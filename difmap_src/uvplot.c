@@ -465,9 +465,10 @@ static int u_axes(U_par *up, int axcol)
 /*
  * Compose a title.
  */
-  sprintf(awrk, "%.16s\\fr at \\fn%.3f GHz in %s  %s", ob->source.name,
-	  getfreq(ob,-1)/1.0e9, Stokes_name(ob->stream.pol.type),
-	  sutdate(ob->date.year, ob->date.ut, bwrk));
+  snprintf(awrk, sizeof(awrk), "%.16s\\fr at \\fn%.3f GHz in %s  %s",
+           ob->source.name,
+           getfreq(ob,-1)/1.0e9, Stokes_name(ob->stream.pol.type),
+           sutdate(ob->date.year, ob->date.ut, bwrk));
 /*
  * Label the plot.
  */
@@ -475,8 +476,8 @@ static int u_axes(U_par *up, int axcol)
 /*
  * Compose axis labels.
  */
-  sprintf(awrk, "U (%s)", uvwunits(U_PLAB));
-  sprintf(bwrk, "V (%s)", uvwunits(U_PLAB));
+  snprintf(awrk, sizeof(awrk), "U (%s)", uvwunits(U_PLAB));
+  snprintf(bwrk, sizeof(bwrk), "V (%s)", uvwunits(U_PLAB));
   cpglab(awrk, bwrk, "");
 /*
  * Plot the reference telescope name and its sub-array as a seconday title.
@@ -684,7 +685,8 @@ static void u_namplt(U_par *up, int erase)
  * Telescope to name?
  */
     cpgsci(erase?0:1);
-    sprintf(title, "%d:%s", refsub+1, up->ob->sub[refsub].tel[reftel].name);
+    snprintf(title, sizeof(title), "%d:%s", refsub+1,
+            up->ob->sub[refsub].tel[reftel].name);
     cpgmtxt("T", 1.0f, 1.0f, 1.0f, title);
     cpgsci(1);
   };
@@ -1376,13 +1378,8 @@ static int u_newmode(U_par *up, int ch_ed)
  */
 static int u_mlab(U_par *up, int erase)
 {
-  Observation *ob;  /* The descriptor of the observation being plotted */
   int oldcol;       /* Temporary storage for entry color index */
   char label[81];   /* Temporary work string to compose mode label in */
-/*
- * Get the descriptor of the observation.
- */
-  ob = up->ob;
 /*
  * Store the existing plot color.
  */
@@ -1397,7 +1394,8 @@ static int u_mlab(U_par *up, int erase)
 /*
  * Compose the mode label.
  */
-  sprintf(label, "Edit %s channels.", up->ch_ed ? "selected" : "all");
+  snprintf(label, sizeof(label), "Edit %s channels.",
+           up->ch_ed ? "selected" : "all");
 /*
  * Plot mode line.
  */

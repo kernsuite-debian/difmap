@@ -1,0 +1,26 @@
+ra, dec
+Specify the original pointing center of the observation.
+
+EXAMPLE
+-------
+
+ 0>pointing_center 10:45:23.123, -02:12:56.234
+ Pointing center:  RA=10:45:23.123  Dec=-02:12:56.234  (2000.0)
+ 0>
+
+PARAMETERS
+----------
+ra       - The Right Ascension of the pointing center, written as a
+           sexagesimal number of hours, minutes and seconds.
+
+dec      - The Declination of the pointing center, written as a
+           sexagesimal number of degrees, minutes and seconds.
+
+CONTEXT
+-------
+If the visibilities in a UV FITS file have been shifted to a new
+pointing center, and there are no OBSRA and OBSDEC keywords to
+indicate the original pointing center, then any primary beam that the
+user specifies will end up being applied to the wrong location. To
+correct this, this command can be used to specify the Right Ascension
+and Declination of the original pointing center of the observation.

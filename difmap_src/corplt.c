@@ -545,7 +545,6 @@ static int c_plaxes(Corpar *cp, int erase)
   Scans *sc;     /* The scan being labelled */
   float utmin;   /* Start UT + 1 day, in seconds since start of year */
   float utmax;   /* End UT + 1 day, in seconds since start of year */
-  float timinc;  /* Time increment in seconds for labelling */
   float ch;      /* Character height to use */
   int oldcol;    /* Color index on entry to function */
   int scan;      /* The scan index being processed */
@@ -574,10 +573,6 @@ static int c_plaxes(Corpar *cp, int erase)
  * Set the character height.
  */
   ch = 0.8f;
-/*
- * Determine the tick increment to use on the time axis.
- */
-  timinc = c_labinc(cp->utsum, 12);
 /*
  * Find first and last visible scans.
  */
@@ -641,13 +636,13 @@ static int c_plaxes(Corpar *cp, int erase)
  */
     cpgsvp(sc->vxa, sc->vxb, cp->vymid, cp->vyb);
     cpgswin(utmin, utmax, 0.0f, 1.0f);
-    cpgtbox("ZHBCST",  /*timinc*/0.0f, 0, " ", 0.0f, 0);
+    cpgtbox("ZHBCST",  0.0f, 0, " ", 0.0f, 0);
 /*
  * Draw the X-axes of the phase plot and enumerate.
  */
     cpgsvp(sc->vxa, sc->vxb, cp->vya, cp->vymid);
     cpgswin(utmin, utmax, 0.0f, 1.0f);
-    cpgtbox("ZHBCNST", /*timinc*/0.0f, 0, " ", 0.0f, 0);
+    cpgtbox("ZHBCNST", 0.0f, 0, " ", 0.0f, 0);
   };
 /*
  * Restore entry color.
@@ -966,14 +961,14 @@ static int c_label(Corpar *cp)
  */
   cpgsci(1);
   cpgsch(1.0f);
-  sprintf(awrk, "%s  %s", ob->source.name,
+  snprintf(awrk, sizeof(awrk), "%s  %s", ob->source.name,
           sutdate(ob->date.year, ob->date.ut, bwrk));
   cpgmtxt("T", 1.7f, 0.0f, 0.0f, awrk);
-  sprintf(awrk, "Corrections for IF %d  Pol %s  Station %d:%.20s",
+  snprintf(awrk, sizeof(awrk), "Corrections for IF %d  Pol %s  Station %d:%.20s",
            cp->cif+1, Stokes_name(ob->stream.pol.type), cp->ts.isub+1,
 	  sub->tel[cp->ts.ta].name);
   cpgmtxt("T", 0.5f, 0.0f, 0.0f, awrk);
-  sprintf(awrk, "%d of %d", cp->ts.ta+1, sub->nstat);
+  snprintf(awrk, sizeof(awrk), "%d of %d", cp->ts.ta+1, sub->nstat);
   cpgmtxt("T", 0.5f, 1.0f, 1.0f, awrk);
 /*
  * In non-interative mode, tell the user what is being plotted.

@@ -1,11 +1,24 @@
-
-Add the current model to the continuum model.
+doset
+Add the current model to the continuum model, or vice versa.
 EXAMPLE
 -------
 
 0>setcont
-Added 20 components to the continuum model.
+Moved 20 components to the continuum model.
 0>
+
+0>setcont false
+Moved 20 continuum components to the normal model.
+0>
+
+PARAMETERS
+----------
+
+doset    -    Default = true
+              If this argument is omitted or given as true, then the
+              current models are added to the continuum
+              model. Otherwise, if doset=false, then the continuum
+              model will be moved back into the normal model.
 
 CONTEXT
 -------

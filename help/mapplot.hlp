@@ -1,4 +1,4 @@
-target, domodel
+target, domodel, usecursor
 Display the dirty beam, residual or restored map and modify CLEAN windows.
 EXAMPLE 1
 ---------
@@ -44,6 +44,15 @@ domodel      -  (Default = false)
                 are drawn in green and negative components in red.
                 Variable components are plotted in yellow (orange if
                 negative).
+
+usecursor    -  (Default = true)
+                If this argument is true, and the plot device has a
+                cursor, then the cursor will be displayed for the
+                user to use to interact with the image.
+                If this argument is false, or the plot device does
+                not have a cursor, then as soon as the image has
+                been plotted, new commands can be entered at the
+                difmap prompt.
 
 RUNNING PARAMETERS
 ------------------

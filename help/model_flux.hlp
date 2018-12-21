@@ -1,0 +1,34 @@
+do_continuum
+Return the flux in either the normal model or the continuum model.
+EXAMPLES
+--------
+
+0>print model_flux()
+1.37916
+0>
+
+0>print "Flux in normal model =", model_flux(false)
+Flux in normal model = 0.830256
+0>print "Flux in continuum model =", model_flux(true)
+Flux in continuum model = 1.37916
+0>
+
+PARAMETERS
+----------
+do_continuum - (Default=false)
+               If this argument is omitted or given as FALSE, the
+               total flux in the normal established and tentative
+               models is returned.  If it is given as TRUE, then
+               the flux of just the continuum model (if any) will be
+               returned.
+
+CONTEXT
+-------
+This command is used to return the total flux in either the normal
+or the continuum model. This is the same flux that is reported at
+the end of the clean and modelfit commands.
+
+RELATED COMMANDS
+----------------
+showmodel - Report detailed information about the current models.
+

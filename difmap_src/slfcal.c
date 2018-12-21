@@ -138,7 +138,6 @@ int slfcal(Observation *ob, int isub, int doall, float gauval, float gaurad,
 	   float uvmin, float uvmax, int *flagged)
 {
   Moddif before,after;/* The goodness of fit before and after selfcal */
-  int keepif;         /* The index of the current IF */
   int cif;            /* The index of the IF being corrected */
   int is;             /* The index of the sub-array being corrected */
   int ifa, ifb;       /* The range of IF indexes to be corrected */
@@ -172,10 +171,6 @@ int slfcal(Observation *ob, int isub, int doall, float gauval, float gaurad,
   ifb = doall ? ob->nif-1 : ob->stream.cif;
   isa = isub>=0 ? isub : 0;
   isb = isub>=0 ? isub : ob->nsub-1;
-/*
- * Keep a record of the current IF, so that it can be restored.
- */
-  keepif = ob->stream.cif;
 /*
  * Establish the tentative model.
  */

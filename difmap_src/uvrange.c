@@ -83,7 +83,6 @@ UVrange *uvrange(Observation *ob, int doall, int dores,
  * Loop through all IFs, ending with the default IF.
  */
   for(cif=bif; (cif=nextIF(ob, cif, 1, 1))>=0 && cif<=eif; cif++) {
-    float uvscale;  /* UV coordinate scale factor */
     Subarray *sub;  /* The descriptor of the sub-array being processed */
     int isub;       /* The index of sub in ob->sub[] */
 /*
@@ -91,10 +90,6 @@ UVrange *uvrange(Observation *ob, int doall, int dores,
  */
     if(getIF(ob, cif))
       return NULL;
-/*
- * Get the uvscale factor for the new IF.
- */
-    uvscale = ob->stream.uvscale;
 /*
  * Look at all integrations of all sub-arrays, to acertain the min and
  * max values of pertinent visibility stats.

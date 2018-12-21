@@ -316,6 +316,7 @@ static int int_pager(Pager *page, Ptype *ptype)
 static int ext_pager(Pager *page)
 {
   char *command;        /* The pager command. */
+  int waserr = 0;       /* True if system() returns an error */
 /*
  * See if the user has set the PAGER environment variable.
  */
@@ -363,7 +364,7 @@ static int ext_pager(Pager *page)
 /*
  * Have it executed.
  */
-      system(page->buffer);
+      waserr = system(page->buffer);
     };
 /*
  * External pager requested, but non available?
@@ -371,7 +372,7 @@ static int ext_pager(Pager *page)
   } else {
     return 1;
   };
-  return 0;
+  return waserr;
 }
 
 /*.......................................................................

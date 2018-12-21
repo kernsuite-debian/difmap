@@ -556,6 +556,9 @@ static int bad_Maplot(char *name, Maplot *mp)
  *                        will be plotted.
  *  markers MarkerList *  A list of markers to be displayed, or NULL if
  *                        not wanted.
+ *  docur          int    If true, let the user interact with
+ *                        the map using the cursor, if the plot device
+ *                        has a cursor. Otherwise, plot non-interactively.
  * Output:
  *  return         int    0 - OK.
  *                        1 - Error.
@@ -563,7 +566,7 @@ static int bad_Maplot(char *name, Maplot *mp)
 int maplot(Observation *ob, MapBeam *mb, Mapwin *mw, MaplotBeam *mpb,
 	   MaplotVect *vect, int domap, Ctable *ctab, int docont, int dovect,
 	   int domod, float *levs, int nlev, float cmul, float *box,
-	   MarkerList *markers)
+	   MarkerList *markers, int docur)
 {
   Maplot *mp;      /* Plot descriptor */
   int waserr = 0;  /* Error status */
@@ -577,7 +580,7 @@ int maplot(Observation *ob, MapBeam *mb, Mapwin *mw, MaplotBeam *mpb,
 /*
  * Interative session?
  */
-  waserr = !mp->hard && mp->cursor && interact(mp);
+  waserr = docur && !mp->hard && mp->cursor && interact(mp);
 /*
  * Transfer any newly created model components in mp->newmod to the
  * tentative model of the observation.
@@ -1254,7 +1257,7 @@ static char *lev_text(Maplot *mp, int *ndone)
 /*
  * Write the line prefix.
  */
-    sprintf(levtxt,"Contours %%:");
+    snprintf(levtxt, sizeof(levtxt), "Contours %%:");
     nchar = strlen(levtxt);
 /*
  * Determine the conversion factor to get percentage levels.
@@ -1274,7 +1277,7 @@ static char *lev_text(Maplot *mp, int *ndone)
  * too long to append to the existing 'nchar' number of characters
  * in levtxt.
  */
-	sprintf(trytxt, " %.3g", newlev * scale);
+	snprintf(trytxt, sizeof(trytxt), " %.3g", newlev * scale);
 	trylen = strlen(trytxt);
 /*
  * Stop if there is insufficient room.
@@ -1298,10 +1301,10 @@ static char *lev_text(Maplot *mp, int *ndone)
  * The first line starts with the multiplier.
  */
     if(*ndone==0)
-      sprintf(levtxt, "Contours: %.3g %s x (",  cpar->cmul,
+      snprintf(levtxt, sizeof(levtxt), "Contours: %.3g %s x (",  cpar->cmul,
 	      mp->domap ? "Jy/beam" : "/beam");
     else
-      sprintf(levtxt, "Contours: ");
+      snprintf(levtxt, sizeof(levtxt), "Contours: ");
     nchar = strlen(levtxt);
 /*
  * Write as many levels into the return string as will fit.
@@ -1317,7 +1320,7 @@ static char *lev_text(Maplot *mp, int *ndone)
  * too long to append to the existing 'nchar' number of characters
  * in levtxt.
  */
-	sprintf(trytxt, "%.3g%c", cpar->levs[ilev],
+	snprintf(trytxt, sizeof(trytxt), "%.3g%c", cpar->levs[ilev],
 		(ilev+1<cpar->nlev) ? ' ':')' );
 	trylen = strlen(trytxt);
 /*
@@ -1357,7 +1360,6 @@ static char *lev_text(Maplot *mp, int *ndone)
  */
 static int setport(Maplot *mp)
 {
-  Contour *cpar;   /* Pointer to contour plot descriptor */
   Cmpar *cmpar;    /* Pointer to color-map plot descriptor */
   int nlines=0;    /* The number of anotation lines below primary X label */
   float botgap;    /* Gap to leave below viewport in character heights */
@@ -1373,7 +1375,6 @@ static int setport(Maplot *mp)
 /*
  * Get pointers to the contour and color-map plot descriptors.
  */
-  cpar = &mp->cpar;
   cmpar = &mp->cmpar;
 /*
  * Center RA/DEC anotation for map.
@@ -1557,8 +1558,8 @@ static int pllabel(Maplot *mp)
   MapBeam *mb;          /* Map/beam descriptor */
   const int labcol=10;  /* Color of frame, labels etc.. */
   int nchar=0;          /* Number of characters used in label buffer */
-  char buf1[81];        /* Buffer to compose a label in */
-  char buf2[81];        /* Buffer to compose a label in */
+  char buf1[128];       /* Buffer to compose a label in */
+  char buf2[128];       /* Buffer to compose a label in */
   float xlabsep;        /* Incremental label separation from X axis */
 /*
  * Sanity check.
@@ -1592,7 +1593,7 @@ static int pllabel(Maplot *mp)
 /*
  * Compose a title.
  */
-  sprintf(buf1, "%.16s\\fr at \\fn%.3f GHz %s", ob->source.name,
+  snprintf(buf1, sizeof(buf1), "%.16s\\fr at \\fn%.3f GHz %s", ob->source.name,
           getfreq(ob, -1)/1.0e9, sutdate(ob->date.year, ob->date.ut, buf2));
 /*
  * Plot it.
@@ -1602,17 +1603,23 @@ static int pllabel(Maplot *mp)
  * Compose a miscellaneous title above the main title.
  */
   if(mp->domap)
-    sprintf(buf1, "\\fr%s %s map. ", mb->ncmp ? "Clean" : "Residual",
+    snprintf(buf1, sizeof(buf1), "\\fr%s %s map. ",
+             mb->ncmp ? "Clean" : "Residual",
 	    Stokes_name(ob->stream.pol.type));
   else
-    sprintf(buf1, "\\frDirty %s beam. ", Stokes_name(ob->stream.pol.type));
+    snprintf(buf1, sizeof(buf1), "\\frDirty %s beam. ",
+             Stokes_name(ob->stream.pol.type));
 /*
  * Stations label or array label.
  */
   nchar = strlen(buf1);
   stnstr(ob, buf2, sizeof(buf2)-1);
-  sprintf(&buf1[nchar], " Array: \\fn%.*s",
-	  (int)(sizeof(buf1)-nchar-12), buf2);
+  if(nchar < sizeof(buf1)) {
+    snprintf(&buf1[nchar], sizeof(buf1) - nchar, " Array: \\fn");
+    nchar = strlen(buf1);
+    if(nchar < sizeof(buf1))
+      snprintf(&buf1[nchar], sizeof(buf1) - nchar, "%s", buf2);
+  }
 /*
  * Display the new label.
  */
@@ -1620,9 +1627,9 @@ static int pllabel(Maplot *mp)
 /*
  * Write the X and Y axis labels.
  */
-  sprintf(buf1, "Relative Declination  (%s)", mapunits(U_PLAB));
+  snprintf(buf1, sizeof(buf1), "Relative Declination  (%s)", mapunits(U_PLAB));
   cpgmtxt("L", primsep, 0.5f, 0.5f, buf1);
-  sprintf(buf1, "Right Ascension  (%s)", mapunits(U_PLAB));
+  snprintf(buf1, sizeof(buf1), "Right Ascension  (%s)", mapunits(U_PLAB));
   cpgmtxt("B", primsep, 0.5f, 0.5f, buf1);
 /*
  * Proceed with the extra labels beneath the plot.
@@ -1636,9 +1643,17 @@ static int pllabel(Maplot *mp)
     double ra = lmtora(ob->source.ra, ob->source.dec, -ob->geom.east, -ob->geom.north, ob->proj);
     double dec = lmtodec(ob->source.ra, ob->source.dec, -ob->geom.east, -ob->geom.north, ob->proj);
     strcpy(buf1, "Map center:  ");
-    sprintf(&buf1[strlen(buf1)], "RA: %s,  ", sradhms(ra, 3, 0, buf2));
-    sprintf(&buf1[strlen(buf1)], "Dec: %s (%.1f)", sraddms(dec, 3, 0, buf2),
-	    ob->source.epoch);
+    nchar = strlen(buf1);
+    if(nchar < sizeof(buf1)) {
+      snprintf(&buf1[strlen(buf1)], sizeof(buf1) - nchar, "RA: %s,  ",
+               sradhms(ra, 3, 0, buf2));
+      nchar = strlen(buf1);
+    }
+    if(nchar < sizeof(buf1)) {
+      snprintf(&buf1[strlen(buf1)], sizeof(buf1) - nchar, "Dec: %s (%.1f)",
+               sraddms(dec, 3, 0, buf2),
+               ob->source.epoch);
+    }
     xlabsep += 1.0f;
     cpgmtxt("B", xlabsep, 0.0f, 0.0f, buf1);
     xlabsep += sepinc;
@@ -1647,9 +1662,9 @@ static int pllabel(Maplot *mp)
  * Anotate peak level of map/beam.
  */
   if(mp->domap && mp->mb->ncmp)
-    sprintf(buf1, "Map peak: %.3g Jy/beam", mp->cpar.peak);
+    snprintf(buf1, sizeof(buf1), "Map peak: %.3g Jy/beam", mp->cpar.peak);
   else
-    sprintf(buf1, "Displayed range: %.3g \\(732) %.3g %s",
+    snprintf(buf1, sizeof(buf1), "Displayed range: %.3g \\(732) %.3g %s",
 	    mp->cpar.cmin, mp->cpar.cmax, mp->domap ? "Jy/beam":" ");
   xlabsep += 1.0f;
   cpgmtxt("B", xlabsep, 0.0f, 0.0f, buf1);
@@ -1680,8 +1695,8 @@ static int pllabel(Maplot *mp)
       plbeam(mb->bmin, mb->bmaj, mb->bpa, mpb->xc, mpb->yc,
 	     xmin, xmax, ymin, ymax);
     };
-    sprintf(buf1, "Beam FWHM: %.3g x %.3g (%s) at %.3g\\uo", radtoxy(mb->bmaj),
-	    radtoxy(mb->bmin), mapunits(U_PLAB), mb->bpa*rtod);
+    snprintf(buf1, sizeof(buf1), "Beam FWHM: %.3g x %.3g (%s) at %.3g\\uo",
+             radtoxy(mb->bmaj), radtoxy(mb->bmin), mapunits(U_PLAB), mb->bpa*rtod);
     xlabsep += 1.0f;
     cpgmtxt("B", xlabsep, 0.0f, 0.0f, buf1);
     xlabsep += sepinc;

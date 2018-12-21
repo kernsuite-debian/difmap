@@ -1208,7 +1208,7 @@ static int s_plaxes(Specplot *sp, int iplot, int cif, int erase)
       cpgmtxt("T", 0.4f, 1.0f, 1.0f, awrk);
   };
   if(iplot==0) {
-    sprintf(awrk, "IF %d", cif+1);
+    snprintf(awrk, sizeof(awrk), "IF %d", cif+1);
     cpgmtxt("T", -1.5f, sp->nifplot * 0.01, 0.0f, awrk);
   };
 /*
@@ -1553,7 +1553,6 @@ static int s_plphs(Specplot *sp, int iplot, int cif, int erase)
 static int s_label(Specplot *sp)
 {
   Observation *ob;      /* The descriptor of the observation being plotted */
-  Specattr *sa;         /* Specplot attributes descriptor */
   char awrk[81];        /* Work string for labelling */
   char bwrk[81];        /* Work string for labelling */
   int ititle = SP_NKEY; /* The number of next title line to be written */
@@ -1562,7 +1561,6 @@ static int s_label(Specplot *sp)
  * Get the observation descriptor.
  */
   ob = sp->ob;
-  sa = sp->sa;
 /*
  * Set the viewport around the area that encloses the plot axes.
  */
@@ -1571,7 +1569,7 @@ static int s_label(Specplot *sp)
  * Compose and write the main title.
  */
   cpgsci(1);
-  sprintf(awrk,"%s  %s  %s averaged spectra.", ob->source.name,
+  snprintf(awrk, sizeof(awrk), "%s  %s  %s averaged spectra.", ob->source.name,
 	  sutdate(ob->date.year, ob->date.ut, bwrk),
 	  sp->sa->avmode==SP_VECTOR ? "Vector":"Scalar");
   cpgsch(1.0f);
@@ -1592,7 +1590,7 @@ static int s_label(Specplot *sp)
 /*
  * Write the Y-axis label(s).
  */
-  sprintf(awrk, "%s%s%s", sp->sa->dophs ? "Phase" : "",
+  snprintf(awrk, sizeof(awrk), "%s%s%s", sp->sa->dophs ? "Phase" : "",
 	                  sp->sa->dophs && sp->sa->doamp ? " and " : "",
 	                  sp->sa->doamp ? "Amplitude" : "");
   cpgmtxt("L", lmarg, 0.5f, 0.5f, awrk);
@@ -3510,7 +3508,7 @@ static int s_bgrp_title(Specplot *sp, SpAttr *spa, int nc, char *s)
  */
     nnew = strlen(prefix);
     if(nnew < nc-nused) {
-      sprintf(s, prefix);
+      sprintf(s, "%s", prefix);
       nused += nnew;
 /*
  * Write the baseline selection.
@@ -3561,7 +3559,7 @@ static int s_pol_title(Specplot *sp, SpAttr *spa, int nc, char *s)
  */
     nnew = strlen(prefix);
     if(nnew < nc-nused) {
-      sprintf(s, prefix);
+      sprintf(s, "%s", prefix);
       nused += nnew;
 /*
  * Write the polarization selection.
@@ -3613,12 +3611,12 @@ static int s_uvr_title(Specplot *sp, SpAttr *spa, int nc, char *s)
  */
     nnew = strlen(prefix);
     if(nnew < nc-nused) {
-      sprintf(s, prefix);
+      sprintf(s, "%s", prefix);
       nused += nnew;
 /*
  * Write the range selection.
  */
-      sprintf(awrk, "%g -> %g (%s)", wavtouv(uvmin), wavtouv(uvmax),
+      snprintf(awrk, sizeof(awrk), "%g -> %g (%s)", wavtouv(uvmin), wavtouv(uvmax),
 	      uvwunits(U_PLAB));
       nnew = strlen(awrk);
       if(nnew+8 < nc-nused) {
@@ -3665,7 +3663,7 @@ static int s_time_title(Specplot *sp, SpAttr *spa, int nc, char *s)
  */
   nnew = strlen(prefix);
   if(nnew < nc-nused) {
-    sprintf(s, prefix);
+    sprintf(s, "%s", prefix);
     nused += nnew;
 /*
  * Write the time-range.

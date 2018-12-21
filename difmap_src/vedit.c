@@ -501,7 +501,6 @@ static int v_find(Vedpar *vp, Vissub *vs, float tval, float value, int isamp)
 static int v_edit(Vedpar *vp, Vissub *vs, int flag, int t)
 {
   Observation *ob;  /* The descriptor of the observation being edited */
-  Subarray *sub;    /* The descriptor of the displayed sub-array */
   int iplot;        /* Sub-plot index */
   int ierr=0;       /* Error status */
 /*
@@ -513,10 +512,9 @@ static int v_edit(Vedpar *vp, Vissub *vs, int flag, int t)
     return 1;
   };
 /*
- * Get the descriptor of the observation and sub-array being edited.
+ * Get the descriptor of the observation.
  */
   ob = vp->ob;
-  sub = vp->sub;
 /*
  * This function modifies the data.
  */

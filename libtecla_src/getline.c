@@ -9822,6 +9822,8 @@ static int gl_display_prompt(GetLine *gl)
 	switch(pptr[1]) {
 /*
  * Add or remove a text attribute from the new set of attributes.
+ * If you add or remove a directive from this list, be sure to update
+ * the equivalent list of directives in gl_displayed_prompt_width().
  */ 
 	case 'B': case 'U': case 'S': case 'P': case 'F': case 'V':
 	case 'b': case 'u': case 's': case 'p': case 'f': case 'v':
@@ -10038,7 +10040,8 @@ static int gl_displayed_prompt_width(GetLine *gl)
  * Check for and skip attribute changing directives.
  */
 	switch(pptr[1]) {
-	case 'B': case 'b': case 'U': case 'u': case 'S': case 's':
+	case 'B': case 'U': case 'S': case 'P': case 'F': case 'V':
+	case 'b': case 'u': case 's': case 'p': case 'f': case 'v':
 	  pptr++;
 	  continue;
 /*
@@ -10424,8 +10427,10 @@ static int gl_present_line(GetLine *gl, const char *prompt,
 /*
  * Load the line into the buffer.
  */
-    if(start_line != gl->line)
+    if(start_line != gl->line) {
+      gl->ntotal = 0;
       gl_buffer_string(gl, start_line, start_len, 0);
+    };
 /*
  * Strip off any trailing newline and carriage return characters.
  */
