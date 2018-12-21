@@ -1,3 +1,11 @@
+difmap (2.5b-1) bionic; urgency=medium
+
+  [ Gijs Molenaar ]
+  * try to fix watch file
+  * New upstream version 2.5b
+
+ -- KERN packaging <packaging@kernsuite.info>  Fri, 21 Dec 2018 15:25:47 +0200
+
 difmap (2.4l-1kern1bionic1) bionic; urgency=medium
 
   * upload to KERN-dev  
