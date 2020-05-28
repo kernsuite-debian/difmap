@@ -3,7 +3,7 @@ COPYRIGHT INFORMATION
 All files in this distribution except for the C code in the slalib_src
 directory are protected by the following copyright declaration.
 
-Copyright (c) 1992-2018 by the California Institute of Technology.
+Copyright (c) 1992-2019 by the California Institute of Technology.
 
 Author: Martin C. Shepherd
 
@@ -35,7 +35,7 @@ one frequency-id (one set of possibly differing IF frequencies).
 Multiple sub-arrays, IFs, spectral-line channels and polarizations are
 now supported.
 
-Difmap version 2.5b was designed to compile on computers running
+Difmap version 2.5e was designed to compile on computers running
 various flavors of Unix, Linux and MacOS X.
 
 SHOPPING LIST
@@ -72,12 +72,12 @@ version of the Difmap cookbook, type the following:
 ftp> cd pub/difmap
 ftp> get cookbook.ps.gz
 ftp> binary
-ftp> get difmap2.5b.tar.gz
+ftp> get difmap2.5e.tar.gz
 ftp> quit
 
 Now unpack the compressed tar file.
 
- tar xzf difmap2.5b.tar.gz
+ tar xzf difmap2.5e.tar.gz
 
 This will place all of the files found in the tar file under a
 subdirectory called ./uvf_difmap/. Move into this subdirectory.
@@ -170,10 +170,10 @@ if you are using csh or tcsh) and type:
 
 You should then see a message like:
 
-  Caltech difference mapping program - version 2.5b (25 Nov 2018)
-  Copyright (c) 1993-2018 California Institute of Technology. All Rights Reserved.
+  Caltech difference mapping program - version 2.5e (30 May 2019)
+  Copyright (c) 1993-2019 California Institute of Technology. All Rights Reserved.
   Type 'help difmap' to list difference mapping commands and help topics.
-  Started logfile: difmap.log on Sun Nov 25 21:38:35 2018
+  Started logfile: difmap.log on Thu May 30 21:38:35 2019
   0>
 
 Where 0> is the difmap prompt.

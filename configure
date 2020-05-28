@@ -373,6 +373,18 @@ case $OS in
 ;;
 esac
 
+# If gfortran has been selected, check if it is the later version that
+# changes the datatype of string length arguments from int to size_t.
+
+case "$FC" in
+    gfortran|*/gfortran)
+        $FC -o gfortran_version cpg_src/gfortran_version.fpp
+        if [ `./gfortran_version` -ge 8 ]; then
+            PGBIND_FLAGS="$PGBIND_FLAGS -lentype size_t"
+        fi
+        \rm -f gfortran_version
+        ;;
+esac
 
 #-----------------------------------------------------------------------
 # You should not have to change anything below this line.

@@ -3,6 +3,60 @@ This file contains the details of recent difmap changes.
 Changes are listed from the most recent to the oldest. Dates are
 formatted as mm/dd/yy.
 
+30/05/2019 version.h
+
+           The version number has been incremented to 2.5e.
+
+30/05/2019 cpg_src/pgbind.c cpg_src/gfortran_version.fpp configure
+
+           The gfortran ABI changed in version 8. When C functions
+           call FORTRAN subroutines with string arguments, the
+           datatype of the extra arguments needed to pass string
+           lengths has changed from int to size_t. To accomodate this,
+           the pgbind program now has an option (-lentype) for
+           specifying the datatype of the string length argument. When
+           gfortran is selected as the FORTRAN compiler, the difmap
+           configure script now compiles a tiny program called
+           gfortran_version, which it runs to determine whether the
+           gfortran version is 8 or larger. If it is, then "-lentype
+           size_t" is appended to the PGBIND_FLAGS configuration
+           variable.
+
+21/05/2019 version.h
+
+           The version number of difmap has been incremented to 2.5d
+
+21/05/2019 sphere_src/lex.h sphere_src/lex.c
+
+           Increased the maximum length of an input line from 512 to
+           2048, the longest filename usable with the @ command from
+           132 to 1024, the maximum number of nested scripting levels
+           from 6 to 10, and the maximum number of preprocessor macros
+           from 50 to 100.
+
+20/05/2019 version.h
+
+           The version number of difmap has been incremented to 2.5c
+
+20/05/2019 uvinvert.c doc/beamsize.tex doc/beamsize.pdf
+
+           The algorithm that difmap uses to estimate an optimal
+           restoring beam originally came from the Caltech VLBI
+           programs.  Unfortunately there was no documentation to
+           indicate how it was derived, so I reproduced it verbatim in
+           difmap without any way to verify it. Recently Jose Gomez at
+           the Event Horizon Telescope reported that difmap’s
+           restoring beam was a bit smaller than calculated by CASA
+           and other software, so I had another look at the equations
+           and this time managed to re-derive them from scratch. This
+           revealed that the overall scaling factor used to calculate
+           the minor and major axes has been 6.6% too small, due to
+           the correct value being truncated to one decimal place.
+
+           I have corrected the code in difmap, and written up the
+           derivation of the equations in a document called
+           beamsize.pdf.
+
 25/11/2018 version.h
 
            The version number of difmap has been incremented to 2.5b.

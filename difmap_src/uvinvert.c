@@ -518,25 +518,46 @@ static int uvgrid(Observation *ob, MapBeam *mb, UVgcf *gcf, float uvmin,
       *(rptr++) /= wsum;
   };
 /*
- * Work out the estimate of the size of the clean beam.
- * The technique used was developed by Tim Pearson, and I don't fully
- * understand it. It depends on the property of fourier transforms
- * that relates the 2nd moment in the UV plane to the curvature at the center 
- * of the beam in the image plane. An empirical fudge factor is used to
- * extrapolate the extents of the beam at HWHM.
+ * Estimate the size and orientation of the restoring beam. The
+ * equations used below are derived in the document beamsize.pdf,
+ * which can be found in the doc subdirectory of the difmap
+ * distribution.  In short, the second derivatives of the center of
+ * the dirty beam in the image plane are calculated via sums in the UV
+ * plane, taking advantage of the equivalence between derivatives in
+ * the image plane and moments in the Fourier domain. These
+ * derivatives uniquely determine an elliptical Gaussian beam that has
+ * the same derivatives at its center. A big advantage of this
+ * technique, which originally appeared in the Caltech VLBI programs,
+ * is that it is only sensitive to the center of the dirty beam, which
+ * is effected less than anywhere else in the beam by the irregular
+ * sampling of the UV plane.
  */
   if(!domap) {
-    const float fudge=0.7f; /* Empirical fudge factor of TJP's algorithm */
+/*
+ * The following scaling factor is derived in beamsize.pdf. It
+ * combines the factor relating UV plane moments to image plane
+ * derivatives and the conversion from the standard deviation of the
+ * beam to the full-width at half maximum of the Gaussian beam.
+ */
+    const float scale = sqrt(4.0 * log(2.0)) / pi;
+/*
+ * Calculate (1/sigma_min^2 - 1/sigma_maj^2), where sigma_min and
+ * sigma_maj are the minor and major axis extents of the elliptical
+ * Gaussian beam, expressed as standard deviations of the Gaussian
+ * beam profile. See beamsize.pdf for details.
+ */
     float ftmp = sqrt((bm.muu-bm.mvv)*(bm.muu-bm.mvv) + 4.0*bm.muv*bm.muv);
 /*
- * First the position angle of the equivalent elliptical gaussian distribution.
+ * Calculate the position angle of the elliptical gaussian.
  */
-    mb->e_bpa = -0.5*atan2(2.0*bm.muv, bm.muu - bm.mvv);
+    mb->e_bpa = -0.5 * atan2(2.0*bm.muv, bm.muu - bm.mvv);
 /*
- * Then the equivalent elliptical beam widths in radians.
+ * Calculate the elliptical minor and major axes of the beam,
+ * expressing them as full-widths at half maximum of the Gaussian
+ * profile, in units of radians.
  */
-    mb->e_bmin = fudge/(sqrt(2.0*(bm.muu+bm.mvv) + 2.0*ftmp));
-    mb->e_bmaj = fudge/(sqrt(2.0*(bm.muu+bm.mvv) - 2.0*ftmp));
+    mb->e_bmin = scale / (sqrt(bm.muu + bm.mvv + ftmp));
+    mb->e_bmaj = scale / (sqrt(bm.muu + bm.mvv - ftmp));
     lprintf(stdout,
          "Estimated beam: bmin=%.4g %s, bmaj=%.4g %s, bpa=%.4g degrees\n",
 	    radtoxy(mb->e_bmin), mapunits(U_NAME),

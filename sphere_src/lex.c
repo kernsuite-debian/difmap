@@ -25,10 +25,10 @@ Comline comline = {'\0', NULL, NULL, 0};
 
 enum {
   MAX_NAME=256,     /* The maximum size of a symbol name */
-  MAX_LEV=6,        /* The maximum number of command levels */
+  MAX_LEV=10,       /* The maximum number of command levels */
   MAX_ARGS=40,      /* The maximum number of pre-processor arguments */
-  MAX_MACRO=50,     /* Max number of macros */
-  MAXFNAME = 132    /* Max char's per file name */
+  MAX_MACRO=100,    /* Max number of macros */
+  MAXFNAME=1024     /* Max char's per file name */
 };
 
 /*
