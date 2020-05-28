@@ -53,6 +53,7 @@ typedef struct {
   int do_lower;   /* If true convert the subroutine name to lower case */
   int ltrue;      /* FORTRAN logical true */
   int lfalse;     /* FORTRAN logical false */
+  char *lentype;  /* The datatype used to pass string lengths */
   char *doc;      /* Documentation of the template */
 } Sysattr;
 
@@ -61,15 +62,15 @@ typedef struct {
  */
 static Sysattr systable[]={
   {
-    "bsd",     SYS_BSD,  "_", 1,  1, 0,
+    "bsd",     SYS_BSD,  "_", 1,  1, 0, "int",
     "BSD f77 template. C string pointers are passed directly, but the length of each string is appended as an extra argument to the FORTRAN procedure call."
  },
   {
-    "cray2", SYS_CRAY2,   "", 0,  1, 0,
+    "cray2", SYS_CRAY2,   "", 0,  1, 0, "",
     "Cray-2 FORTRAN template. C string pointers and lengths are combined into a single argument with the Cray fortran.h _cptofcd(pointer,length) macro."
  },
   {
-    "vms",     SYS_VMS,   "", 1, -1, 0,
+    "vms",     SYS_VMS,   "", 1, -1, 0, "",
     "VMS FORTRAN template. C strings are passed via FORTRAN string descriptors."
   },
 };
@@ -80,7 +81,7 @@ static int nsystem = sizeof(systable) / sizeof(systable[0]);
  * Enumerate and list all command-line options.
  */
 typedef enum {OP_NONE, OP_WRAPPER, OP_HEADER, OP_SUFFIX, OP_CASE,
-	      OP_FALSE, OP_TRUE} Optype;
+	      OP_FALSE, OP_TRUE, OP_LENTYPE} Optype;
 static struct {
   Optype type;   /* The enumeration identifier of the option */
   char *name;    /* The command-line option name (including hyphen prefix) */
@@ -111,6 +112,10 @@ static struct {
     OP_TRUE, "-true",      "integer",  
     "The numerical value of FORTRAN .TRUE."
   },
+  {
+    OP_LENTYPE, "-lentype", "integer_datatype",
+    "The datatype used to pass string lengths to FORTRAN subroutines."
+  }
 };
 
 static int noptions = sizeof(options) / sizeof(options[0]);
@@ -351,6 +356,9 @@ static int usage(void)
       case OP_TRUE:
 	fprintf(stderr, " %s %d", option, sys->ltrue);
 	break;
+      case OP_LENTYPE:
+	fprintf(stderr, " %s %s", option, sys->lentype);
+	break;
       };
     };
     fprintf(stderr, "\n");
@@ -515,6 +523,19 @@ static PGbind *new_PGbind(int argc, char **argv)
 		  option);
 	  return del_PGbind(pg);
 	};
+      } else {
+	fprintf(stderr, "%s: Missing argument to the %s option.\n", prgnam,
+		option);
+	return del_PGbind(pg);
+      };
+      break;
+/*
+ * Override the default dataytpe used to pass string lengths to
+ * FORTRAN subroutines.
+ */
+    case OP_LENTYPE:
+      if(++i < argc) {
+	pg->sys.lentype = argv[i];
       } else {
 	fprintf(stderr, "%s: Missing argument to the %s option.\n", prgnam,
 		option);
@@ -1002,7 +1023,7 @@ static int write_wrapper(Sysattr *sys, Function *fn)
 	      sys->ltrue, sys->lfalse);
       break;
     case DAT_CHR:
-      fprintf(wfile, "  int len_%s = ", arg->name);
+      fprintf(wfile, "  %s len_%s = ", sys->lentype, arg->name);
       if(arg->length_arg < 0) {
 	if(arg->is_scalar)
 	  fprintf(wfile, "1;\n");

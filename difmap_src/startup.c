@@ -28,7 +28,7 @@ int cdifmap_(void)
  * Write start-up message.
  */
 #include "version.h"
-  lprintf(stdout, "Copyright (c) 1993-2018 California Institute of Technology. All Rights Reserved.\n");
+  lprintf(stdout, "Copyright (c) 1993-2019 California Institute of Technology. All Rights Reserved.\n");
   lprintf(stdout, "Type 'help difmap' to list difference mapping commands and help topics.\n");
 /*
  * Start up the interface.

@@ -1,0 +1,310 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath}
+%
+% Set the page size.
+%
+\topmargin -0.5in \headsep 0.251in
+\hoffset -0.8in
+\marginparwidth 0in \marginparsep 0in
+\textheight 9.5in \textwidth 6.5in
+\parindent 0pt
+\parskip 8pt plus 1pt minus 1pt
+\pagestyle{headings}
+
+\newcommand{\bpa}{\theta}
+\newcommand{\minor}{\sigma_{\mbox{\scriptsize min}}}
+\newcommand{\major}{\sigma_{\mbox{\scriptsize maj}}}
+\newcommand{\minorfwhm}{b_{\mbox{\scriptsize min}}}
+\newcommand{\majorfwhm}{b_{\mbox{\scriptsize maj}}}
+\newcommand{\arctantwo}[2]{\mbox{\,atan2}( #1, #2 )}
+
+\newcommand{\cxx}{c_{xx}}
+\newcommand{\cyy}{c_{yy}}
+\newcommand{\cxy}{c_{xy}}
+
+\newcommand{\suu}{s_{uu}}
+\newcommand{\svv}{s_{vv}}
+\newcommand{\suv}{s_{uv}}
+
+\begin{document}
+
+\title{The Determination of the Default Restoring Beam in Difmap}
+\author{Martin Shepherd}
+\maketitle
+
+\section{Introduction}
+
+Observations of the sky with an interferometer sample the Fourier
+transform of the sky at discrete points. This Fourier transform plane
+is known as the UV plane, named after the U and V coordinates that are
+used to label its axes. After accumulating many samples at different
+locations in the UV plane, an image may be formed by gridding these
+samples onto a regular two-dimensional array and taking the inverse
+Fourier transform. The result is an image of the sky that has been
+convolved with the PSF of the interferometer. The PSF, known as the
+dirty beam, is the inverse Fourier transform of the sampling weights
+in the UV plane. The dirty beam, tends to be very irregular due to
+incomplete sampling of the UV plane, so the initial image of the sky
+can be hard to interpret, with each bright feature in the image being
+accompanied by side-lobes.
+
+To obtain an image that is easier to analyze than the dirty image, a
+number of deconvolution schemes have been developed. These aim of
+re-convolving the image with a much simpler beam that doesn’t have
+side-lobes, such as an elliptical Gaussian, but with similar average
+resolution to the irregular synthesized beam.
+
+The simplest deconvolution scheme is known as CLEAN. This decomposes
+the dirty image into a set of delta functions, each one representing a
+separate bright point-like feature in the image, plus a residual image
+of the background noise. The delta functions, known as CLEAN
+components, are then convolved with the chosen elliptical Gaussian
+beam, known as the restoring beam, and the resulting images are added
+back to the residual image of the noise. The final result is known as
+the restored or clean image.
+
+This document describes one way to choose the dimensions and
+orientation of an elliptical Gaussian restoring beam that best matches
+the resolution of the dirty beam. An obvious way to do this would be
+to perform a least-squares fit of an elliptical Gaussian to an image
+of the dirty beam. However this is not as straight forward as it might
+seem, because in general the dirty beam does not look much like a
+Gaussian, except very close to the center.
+
+The method used in Difmap, which was inherited from the earlier
+Caltech VLBI programs, takes note of the fact that the center of the
+dirty beam is the only part of the synthesized beam that tends to look
+somewhat Gaussian. What it does is calculate the elliptical Gaussian
+that has the same curvature as the dirty beam at the center of the
+image. Image plane derivatives are trivial to calculate in the Fourier
+plane, so in practice this is done while calculating the weights used
+to grid the observed data in the UV plane.
+
+\section{Characterizing the clean beam}
+
+Let $f(\alpha,\beta)$ be an elliptical Gaussian beam with a peak value
+of unity, where $\alpha$ is a coordinate along the major axis, whose
+length is the Gaussian standard deviation $\major$, and $\beta$ is the
+coordinate along the minor axis, whose length is the Gaussian standard
+deviation, $\minor$.
+
+In the $(\alpha,\beta)$ coordinate system, the two-dimensional
+elliptical gaussian PSF can be written:
+
+\begin{equation}
+\label{gaussian_eqn}
+  f(\alpha,\beta) = \exp(-0.5 (\alpha^2 / \major^2 + \beta^2 / \minor^2))
+\end{equation}
+
+On the sky the major axis of the beam is rotated anticlockwise east of
+north by an angle $\bpa$. Within Difmap, however, images of the sky
+are stored with coordinates of $(x,y)$, where $x$ goes from west to
+east. In this coordinate system the beam is rotated clockwise by the
+angle $\bpa$.
+
+Given a sky coordinate, $(x,y$), the corresponding position along the
+major and minor axes of the elliptical Gaussian are given by rotating
+the $x$ and $y$ clockwise by the angle $\bpa$, as follows.
+
+\begin{equation}
+\begin{pmatrix}
+\beta \\
+\alpha
+\end{pmatrix}
+=
+\begin{pmatrix}
+    \cos{\bpa} & -\sin{\bpa}\\
+    \sin{\bpa} &  \cos{\bpa}
+\end{pmatrix}
+\begin{pmatrix}
+x \\
+y
+\end{pmatrix}
+\end{equation}
+
+\begin{eqnarray}
+  \beta &=&  x\cos{\bpa} - y\sin{\bpa} \\
+  \alpha &=&  x\sin{\bpa} + y\cos{\bpa}
+\end{eqnarray}
+
+If we substitute these equations for $\alpha$ and $\beta$ into
+equation~\ref{gaussian_eqn}, we obtain the following equation for the
+beam in the $(x,y)$ coordinate system.
+
+\begin{equation}
+\label{beam_xy_eqn}
+    s(x,y) = \exp(-0.5 (x\sin{\bpa} + y\cos{\bpa})^2 / \major^2
+                  -0.5 (x\cos{\bpa} - y\sin{\bpa})^2 / \minor^2)
+\end{equation}
+
+\section{The curvature of the Gaussian at the origin}
+
+The second derivative of $s(x,y)$ with respect to $x$ is is as follows.
+
+\begin{multline}
+    \frac{d^2s}{d x^2} = ( (-y\cos{\bpa}\sin{\bpa} - x\sin{\bpa}^2) / \major^2 +
+                           ( y\cos{\bpa}\sin{\bpa} - x\cos{\bpa}^2) / \minor^2
+              )^2  s(x,y)\\ + (-\sin{\bpa}^2/\major^2 - \cos{\bpa}^2/\minor^2)  s(x,y)
+\end{multline}
+
+Similarly, the second derivative of $s(x,y)$ with respect to $y$ is as follows.
+
+\begin{multline}
+    \frac{d^2s}{d y^2} = ( (y\cos{\bpa}^2 - x\cos{\bpa}\sin{\bpa}) / \major^2 +
+                (y\sin{\bpa}^2 + x\cos{\bpa}\sin{\bpa}) / \minor^2
+              )^2  s(x,y)\\ + (-\cos{\bpa}^2/\major^2 - \sin{\bpa}^2/\minor^2)  s(x,y)
+\end{multline}
+
+Finally, the second derivative of $s(x,y)$ with respect to $dx dy$ is
+as follows.
+
+\begin{multline}
+      \frac{ds}{dx dy} = ((-y\cos{\bpa}\sin{\bpa} - x\sin{\bpa}^2) / \major^2 +
+                 ( y\cos{\bpa}\sin{\bpa} - x\cos{\bpa}^2) / \minor^2
+                )\times \\ ((-x\cos{\bpa}\sin{\bpa} - y\cos{\bpa}^2) / \major^2 +
+                     ( x\cos{\bpa}\sin{\bpa} - y\sin{\bpa}^2) / \minor^2
+                    ) s(x,y)\\ + (-\cos{\bpa}\sin{\bpa} / \major^2 + \cos{\bpa}\sin{\bpa}/\minor^2) s(x,y)
+\end{multline}
+
+If we evaluate each of the above derivatives at the origin,
+$(x=0,y=0)$, then we obtain the following for the derivatives of the
+Gaussian at the origin of the image plane.
+
+\begin{align}
+\label{cxx_eqn}
+    \cxx &= d^2s(0,0)/dx^2 &= -\sin{\bpa}^2 / \major^2 - \cos{\bpa}^2 / \minor^2\\
+\label{cyy_eqn}
+    \cyy &= d^2s(0,0)/dy^2 &= -\cos{\bpa}^2 / \major^2 - \sin{\bpa}^2 / \minor^2\\
+\label{cxy_eqn}
+    \cxy &= d^2s(0,0)/dxdy &= 0.5  \sin{2\bpa}  (1/\minor^2 - 1/\major^2)
+\end{align}
+
+Note that the two curvatures (equations~\ref{cxx_eqn} and
+\ref{cyy_eqn}) are negative, as expected for the curvature of a peak.
+
+\section{Obtaining Gaussian parameters from the second derivatives}
+
+As a first step towards determining the Gaussian parameters, $\major$,
+$\minor$ and $\bpa$, we combine equations~\ref{cxx_eqn},\ref{cyy_eqn}
+and \ref{cxy_eqn} as follows.
+
+\begin{align}
+    \cxx + \cyy &= -1/\major^2 - 1/\minor^2 \\
+    \cxx - \cyy &= -\cos{2\bpa}  (1/\minor^2 - 1/\major^2)\\
+    (2 \cxy)^2 + (\cxx-\cyy)^2 &= (1/\minor^2 - 1/\major^2)^2
+\end{align}
+
+In the above equations, note that we are aiming to obtain $(1/\minor^2
+- 1/\major^2)$, which is positive, whereas $(1/\major^2 - 1/\minor^2)$
+should be negative. This becomes important below where we would
+otherwise lose a negative by square-rooting the square of this term.
+
+Solving the above equations for the Gaussian parameters, we obtain the
+following.
+
+\begin{eqnarray}
+  \label{bpa_im_eqn}
+    \bpa &=& 0.5  \arctantwo{2\cxy}{\cyy-\cxx}\\
+  \label{major_im_eqn}
+    \major &=& \sqrt{\frac{2}{-\left(\sqrt{4\cxy^2 + (\cxx-\cyy)^2} + \cxx+\cyy\right)}}\\
+  \label{minor_im_eqn}
+    \minor &=& \sqrt{\frac{2}{\sqrt{4\cxy^2 + (\cxx-\cyy)^2} - (\cxx+\cyy)}}
+\end{eqnarray}
+
+\section{Obtaining derivatives via the Fourier plane}
+
+We can obtain $\cxx$, $\cyy$ and $\cxy$ at the origin by performing a simple
+operation to the Fourier transform of the beam.
+
+If the Fourier transform of $s(x,y)$ is denoted $S(u,v)$, then the
+image plane derivatives needed in the previous section can be obtained
+as follows.
+
+\begin{align}
+  d^2s/dx^2 &<=> -4\pi^2  u^2  S(u,v)\\
+  d^2s/dy^2 &<=> -4\pi^2  v^2  S(u,v)\\
+  ds/dxdy &<=> -4\pi^2 u v  S(u,v)
+\end{align}
+
+The value at the origin of an inverse Fourier transform is the
+integral or sum of the values in the Fourier transform, so we can
+calculate the desired derivatives in the image plane as follows.
+
+\begin{align}
+  \cxx &= -4 \pi^2  \sum{u^2  S(u,v)} \\
+  \cyy &= -4 \pi^2  \sum{v^2  S(u,v)} \\
+  \cxy &= -4 \pi^2  \sum{u v  S(u,v)}
+\end{align}
+
+To simplify the subsequent equations, we define the following values.
+
+\begin{align}
+  \suu &= \sum{u^2  S(u,v)} \\
+  \svv &= \sum{v^2  S(u,v)} \\
+  \suv &= \sum{u v  S(u,v)}
+\end{align}
+
+In terms of these values, the derivatives can now be written as
+follows.
+
+\begin{align}
+\label{cxx_uv_eqn}
+  \cxx &= -4\pi^2  \suu \\
+\label{cyy_uv_eqn}
+  \cyy &= -4\pi^2  \svv \\
+\label{cxy_uv_eqn}
+  \cxy &= -4\pi^2  \suv
+\end{align}
+
+\section{Computing the Gaussian parameters via the Fourier plane}
+
+If we insert the derivatives of equations~\ref{cxx_uv_eqn},
+\ref{cyy_uv_eqn} and \ref{cxy_uv_eqn} into equations~\ref{bpa_im_eqn},
+\ref{minor_im_eqn} and \ref{major_im_eqn}, we obtain the following
+equations for the Gaussian parameters.
+
+\begin{align}
+  \bpa &= -0.5  \arctantwo{2 \suv}{\suu-\svv}\\
+  \minor &= 1 / \sqrt{2} / \pi / \sqrt{\sqrt{4 \suv^2 + (\suu-\svv)^2} + (\suu+\svv)}\\
+  \major &=  1 / \sqrt{2} / \pi / \sqrt{-(\sqrt{4 \suv^2 + (\suu-\svv)^2} - (\suu+\svv))}
+\end{align}
+
+In difmap, the dimensions of the Gaussian beam are specified as Full
+Widths at Half Maximum (FWHM). We can obtain those by scaling the
+standard deviations given above by $\sqrt{8 \ln{2}}$.
+
+\begin{align}
+  \minorfwhm &= \sqrt{4 \ln{2}}/\pi / \sqrt{\suu+\svv + \sqrt{4 \suv^2
+      + (\suu-\svv)^2}} \\
+  \majorfwhm &= \sqrt{4 \ln{2}}/\pi / \sqrt{\suu+\svv - \sqrt{4
+         \suv^2 + (\suu-\svv)^2}}
+\end{align}
+
+\section{The algorithm historically used in Difmap}
+
+In Difmap versions up to 2.5b (25 Nov 2018)), the algorithm difmap
+used was inherited verbatim from the VLBI programs, which used the
+following equations:
+
+\begin{align}
+  k &= 0.7 \\
+  \bpa &= -0.5  \arctantwo{2 \suv}{\suu - \svv} \\
+  \minorfwhm &= k/\sqrt{2} / \sqrt{\suu+\svv + \sqrt{4 \suv^2 + (\suu-\svv)^2}} \\
+  \majorfwhm &= k/\sqrt{2} / \sqrt{\suu+\svv - \sqrt{4 \suv^2 + (\suu-\svv)^2}}
+\end{align}
+
+From the correct equations of the previous section, $k$ ought to have
+had the following value.
+
+\begin{align}
+  k_{\mbox{\scriptsize true}} &= \sqrt{8 \ln{2}}/\pi \\
+               &= 0.7495625
+\end{align}
+
+This is 6.6\% larger than the value used in Difmap, such that the
+default Gaussian beam used to restore images in Difmap was been 6.6\%
+too small.
+
+This was corrected in Difmap version 2.5c (20 May 2019).
+
+\end{document}

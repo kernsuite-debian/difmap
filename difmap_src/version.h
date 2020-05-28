@@ -1,1 +1,1 @@
-printf("Caltech difference mapping program - version 2.5b (25 Nov 2018)\n");
+printf("Caltech difference mapping program - version 2.5e (30 May 2019)\n");

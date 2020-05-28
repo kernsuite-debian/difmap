@@ -1,7 +1,7 @@
 #ifndef lex_h
 #define lex_h
 
-enum {MAX_LINE=512};  /* The maximum size of an input line of text. */
+enum {MAX_LINE=2048};  /* The maximum size of an input line of text. */
 
 /*
   The Args type will be used to hold a record of arguments for the
